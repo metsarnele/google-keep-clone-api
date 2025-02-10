@@ -1,5 +1,5 @@
 const express = require('express');
-const swaggerUi = require('swagger-ui-express');
+const swaggerUi = require('swagger-ui-express'); // Kontrolli, et see rida on olemas
 const fs = require('fs');
 
 const app = express();

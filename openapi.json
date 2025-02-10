@@ -70,8 +70,8 @@
           }
         }
       },
-      "put": {
-        "summary": "Update a note",
+      "patch": {
+        "summary": "Partially update a note",
         "parameters": [
           {
             "name": "id",
@@ -86,7 +86,27 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/Note" }
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "content": {
+                    "type": "string"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "reminder": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              }
             }
           }
         },
@@ -129,6 +149,41 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/tags/{id}": {
+      "patch": {
+        "summary": "Partially update a tag",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tag updated successfully"
           }
         }
       }
