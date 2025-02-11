@@ -38,6 +38,7 @@ const authenticateToken = (req, res, next) => {
     });
 };
 
+// User routes
 app.post("/users", async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ message: "Username and password are required" });
@@ -47,11 +48,17 @@ app.post("/users", async (req, res) => {
     res.status(201).json({ message: "User registered successfully" });
 });
 
-app.patch("/users/:id", authenticateToken, (req, res) => {
+app.patch("/users/:id", authenticateToken, async (req, res) => {
+    const { username, password } = req.body;
+    if (!username && !password) return res.status(400).json({ message: "At least one field (username or password) is required" });
+
     const user = users.find(u => u.id === req.params.id);
     if (!user) return res.status(404).json({ message: "User not found" });
-    Object.assign(user, req.body);
-    res.json(user);
+
+    if (password) user.password = await bcrypt.hash(password, 10);
+    if (username) user.username = username;
+
+    res.status(200).json({ message: "User updated successfully" });
 });
 
 app.delete("/users/:id", authenticateToken, (req, res) => {
@@ -59,35 +66,39 @@ app.delete("/users/:id", authenticateToken, (req, res) => {
     res.status(204).send();
 });
 
+// Session routes
 app.post("/sessions", async (req, res) => {
     const { username, password } = req.body;
+    if (!username || !password) return res.status(400).json({ message: "Username and password are required" });
+
     const user = users.find(u => u.username === username);
     if (!user || !(await bcrypt.compare(password, user.password))) return res.status(401).json({ message: "Invalid credentials" });
 
     const token = jwt.sign({ id: user.id, username: user.username }, SECRET_KEY, { expiresIn: "1h" });
-    sessions.push({ id: uuidv4(), userId: user.id, token, createdAt: new Date().toISOString() });
-    res.json({ token });
+    res.status(200).json({ token });
 });
 
-app.post("/sessions/logout", authenticateToken, (req, res) => {
+app.delete("/sessions", authenticateToken, (req, res) => {
     sessions = sessions.filter(s => s.token !== req.header("Authorization").replace("Bearer ", ""));
-    res.status(200).json({ message: "User logged out successfully" });
+    res.status(204).send();
 });
 
-app.get("/notes", authenticateToken, (req, res) => res.json(notes));
+// Notes routes
+app.get("/notes", authenticateToken, (req, res) => res.status(200).json(notes));
 app.post("/notes", authenticateToken, (req, res) => {
-    const { title, content, tags, reminder } = req.body;
+    const { title, content } = req.body;
     if (!title || !content) return res.status(400).json({ message: "Title and content are required" });
-    const newNote = { id: uuidv4(), title, content, tags: tags || [], reminder: reminder || null };
-    notes.push(newNote);
-    res.status(201).json(newNote);
+
+    notes.push({ id: uuidv4(), title, content, tags: [], reminder: null });
+    res.status(201).json({ message: "Note created successfully" });
 });
 
 app.patch("/notes/:id", authenticateToken, (req, res) => {
     const note = notes.find(n => n.id === req.params.id);
     if (!note) return res.status(404).json({ message: "Note not found" });
+
     Object.assign(note, req.body);
-    res.json(note);
+    res.status(200).json({ message: "Note updated successfully" });
 });
 
 app.delete("/notes/:id", authenticateToken, (req, res) => {
@@ -95,20 +106,21 @@ app.delete("/notes/:id", authenticateToken, (req, res) => {
     res.status(204).send();
 });
 
-app.get("/tags", authenticateToken, (req, res) => res.json(tags));
+// Tags routes
 app.post("/tags", authenticateToken, (req, res) => {
     const { name } = req.body;
     if (!name) return res.status(400).json({ message: "Tag name is required" });
-    const newTag = { id: uuidv4(), name };
-    tags.push(newTag);
-    res.status(201).json(newTag);
+    tags.push({ id: uuidv4(), name });
+    res.status(201).json({ message: "Tag created successfully" });
 });
 
 app.patch("/tags/:id", authenticateToken, (req, res) => {
     const tag = tags.find(t => t.id === req.params.id);
     if (!tag) return res.status(404).json({ message: "Tag not found" });
-    Object.assign(tag, req.body);
-    res.json(tag);
+    if (!req.body.name) return res.status(400).json({ message: "Tag name is required" });
+
+    tag.name = req.body.name;
+    res.status(200).json({ message: "Tag updated successfully" });
 });
 
 app.delete("/tags/:id", authenticateToken, (req, res) => {

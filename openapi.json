@@ -3,7 +3,7 @@
   "info": {
     "title": "Google Keep Clone API",
     "version": "1.0.0",
-    "description": "This project is a Google Keep Clone API that provides a note-taking application with tags and reminders."
+    "description": "A RESTful API that replicates the core functionalities of Google Keep, allowing users to create, update, delete, and retrieve notes with tags and reminders. Supports user authentication and session management."
   },
   "servers": [
     {
@@ -15,16 +15,13 @@
     "/users": {
       "post": {
         "summary": "Register a new user",
+        "tags": ["Users"],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "username": { "type": "string" },
-                  "password": { "type": "string" }
-                }
+                "$ref": "#/components/schemas/User"
               }
             }
           }
@@ -38,19 +35,15 @@
     "/users/{id}": {
       "patch": {
         "summary": "Update user details",
+        "tags": ["Users"],
         "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "username": { "type": "string" },
-                  "password": { "type": "string" }
-                }
-              }
+              "schema": { "$ref": "#/components/schemas/UserUpdate" }
             }
           }
         },
@@ -61,8 +54,11 @@
       },
       "delete": {
         "summary": "Delete a user",
+        "tags": ["Users"],
         "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
         "responses": {
           "204": { "description": "User deleted successfully" },
           "404": { "description": "User not found" }
@@ -72,17 +68,12 @@
     "/sessions": {
       "post": {
         "summary": "User login",
+        "tags": ["Sessions"],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "username": { "type": "string" },
-                  "password": { "type": "string" }
-                }
-              }
+              "schema": { "$ref": "#/components/schemas/UserLogin" }
             }
           }
         },
@@ -90,20 +81,20 @@
           "200": { "description": "JWT token returned" },
           "401": { "description": "Invalid credentials" }
         }
-      }
-    },
-    "/sessions/logout": {
-      "post": {
+      },
+      "delete": {
         "summary": "User logout",
+        "tags": ["Sessions"],
         "security": [{ "bearerAuth": [] }],
         "responses": {
-          "200": { "description": "User logged out successfully" }
+          "204": { "description": "User logged out successfully" }
         }
       }
     },
     "/notes": {
       "get": {
         "summary": "Retrieve all notes",
+        "tags": ["Notes"],
         "security": [{ "bearerAuth": [] }],
         "responses": {
           "200": { "description": "A list of notes" }
@@ -111,6 +102,7 @@
       },
       "post": {
         "summary": "Create a new note",
+        "tags": ["Notes"],
         "security": [{ "bearerAuth": [] }],
         "requestBody": {
           "required": true,
@@ -123,11 +115,16 @@
         "responses": {
           "201": { "description": "Note created successfully" }
         }
-      },
+      }
+    },
+    "/notes/{id}": {
       "patch": {
         "summary": "Update a note",
+        "tags": ["Notes"],
         "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
         "responses": {
           "200": { "description": "Note updated successfully" },
           "404": { "description": "Note not found" }
@@ -135,8 +132,11 @@
       },
       "delete": {
         "summary": "Delete a note",
+        "tags": ["Notes"],
         "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
         "responses": {
           "204": { "description": "Note deleted successfully" },
           "404": { "description": "Note not found" }
@@ -146,6 +146,7 @@
     "/tags": {
       "post": {
         "summary": "Create a new tag",
+        "tags": ["Tags"],
         "security": [{ "bearerAuth": [] }],
         "requestBody": {
           "required": true,
@@ -158,11 +159,16 @@
         "responses": {
           "201": { "description": "Tag created successfully" }
         }
-      },
+      }
+    },
+    "/tags/{id}": {
       "patch": {
         "summary": "Update a tag",
+        "tags": ["Tags"],
         "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
         "responses": {
           "200": { "description": "Tag updated successfully" },
           "404": { "description": "Tag not found" }
@@ -170,8 +176,11 @@
       },
       "delete": {
         "summary": "Delete a tag",
+        "tags": ["Tags"],
         "security": [{ "bearerAuth": [] }],
-        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
         "responses": {
           "204": { "description": "Tag deleted successfully" },
           "404": { "description": "Tag not found" }
@@ -181,27 +190,53 @@
   },
   "components": {
     "schemas": {
+      "User": {
+        "type": "object",
+        "required": ["username", "password"],
+        "properties": {
+          "username": { "type": "string" },
+          "password": { "type": "string" }
+        }
+      },
+      "UserUpdate": {
+        "type": "object",
+        "properties": {
+          "username": { "type": "string" },
+          "password": { "type": "string" }
+        }
+      },
+      "UserLogin": {
+        "type": "object",
+        "required": ["username", "password"],
+        "properties": {
+          "username": { "type": "string" },
+          "password": { "type": "string" }
+        }
+      },
       "Note": {
         "type": "object",
+        "required": ["title", "content"],
         "properties": {
           "title": { "type": "string" },
           "content": { "type": "string" },
-          "tags": {
-            "type": "array",
-            "items": { "type": "string" }
-          },
+          "tags": { "type": "array", "items": { "type": "string" } },
           "reminder": { "type": "string", "format": "date-time" }
-        },
-        "required": ["title", "content"]
+        }
       },
       "Tag": {
         "type": "object",
+        "required": ["name"],
         "properties": {
           "name": { "type": "string" }
-        },
-        "required": ["name"]
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
       }
     }
   }
 }
-
