@@ -87,6 +87,7 @@
         "tags": ["Sessions"],
         "security": [{ "bearerAuth": [] }],
         "responses": {
+          "401": { "description": "Access denied: Missing or invalid token" },
           "204": { "description": "User logged out successfully" }
         }
       }
@@ -125,6 +126,13 @@
         "parameters": [
           { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Note" }
+            }
+          }
+        },
         "responses": {
           "200": { "description": "Note updated successfully" },
           "404": { "description": "Note not found" }
@@ -144,6 +152,14 @@
       }
     },
     "/tags": {
+      "get": {
+        "summary": "Retrieve all tags",
+        "tags": ["Tags"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "A list of tags" }
+        }
+      },
       "post": {
         "summary": "Create a new tag",
         "tags": ["Tags"],
@@ -169,6 +185,13 @@
         "parameters": [
           { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Tag" }
+            }
+          }
+        },
         "responses": {
           "200": { "description": "Tag updated successfully" },
           "404": { "description": "Tag not found" }
@@ -185,57 +208,6 @@
           "204": { "description": "Tag deleted successfully" },
           "404": { "description": "Tag not found" }
         }
-      }
-    }
-  },
-  "components": {
-    "schemas": {
-      "User": {
-        "type": "object",
-        "required": ["username", "password"],
-        "properties": {
-          "username": { "type": "string" },
-          "password": { "type": "string" }
-        }
-      },
-      "UserUpdate": {
-        "type": "object",
-        "properties": {
-          "username": { "type": "string" },
-          "password": { "type": "string" }
-        }
-      },
-      "UserLogin": {
-        "type": "object",
-        "required": ["username", "password"],
-        "properties": {
-          "username": { "type": "string" },
-          "password": { "type": "string" }
-        }
-      },
-      "Note": {
-        "type": "object",
-        "required": ["title", "content"],
-        "properties": {
-          "title": { "type": "string" },
-          "content": { "type": "string" },
-          "tags": { "type": "array", "items": { "type": "string" } },
-          "reminder": { "type": "string", "format": "date-time" }
-        }
-      },
-      "Tag": {
-        "type": "object",
-        "required": ["name"],
-        "properties": {
-          "name": { "type": "string" }
-        }
-      }
-    },
-    "securitySchemes": {
-      "bearerAuth": {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "JWT"
       }
     }
   }

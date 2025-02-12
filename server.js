@@ -25,7 +25,6 @@ app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 let users = [];
 let notes = [];
 let tags = [];
-let sessions = [];
 
 const authenticateToken = (req, res, next) => {
     const token = req.header("Authorization");
@@ -49,14 +48,11 @@ app.post("/users", async (req, res) => {
 });
 
 app.patch("/users/:id", authenticateToken, async (req, res) => {
-    const { username, password } = req.body;
-    if (!username && !password) return res.status(400).json({ message: "At least one field (username or password) is required" });
-
     const user = users.find(u => u.id === req.params.id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (password) user.password = await bcrypt.hash(password, 10);
-    if (username) user.username = username;
+    if (req.body.password) user.password = await bcrypt.hash(req.body.password, 10);
+    if (req.body.username) user.username = req.body.username;
 
     res.status(200).json({ message: "User updated successfully" });
 });
@@ -69,8 +65,6 @@ app.delete("/users/:id", authenticateToken, (req, res) => {
 // Session routes
 app.post("/sessions", async (req, res) => {
     const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ message: "Username and password are required" });
-
     const user = users.find(u => u.username === username);
     if (!user || !(await bcrypt.compare(password, user.password))) return res.status(401).json({ message: "Invalid credentials" });
 
@@ -79,18 +73,19 @@ app.post("/sessions", async (req, res) => {
 });
 
 app.delete("/sessions", authenticateToken, (req, res) => {
-    sessions = sessions.filter(s => s.token !== req.header("Authorization").replace("Bearer ", ""));
     res.status(204).send();
 });
 
 // Notes routes
 app.get("/notes", authenticateToken, (req, res) => res.status(200).json(notes));
+
 app.post("/notes", authenticateToken, (req, res) => {
-    const { title, content } = req.body;
+    const { title, content, tags: noteTags, reminder } = req.body;
     if (!title || !content) return res.status(400).json({ message: "Title and content are required" });
 
-    notes.push({ id: uuidv4(), title, content, tags: [], reminder: null });
-    res.status(201).json({ message: "Note created successfully" });
+    const newNote = { id: uuidv4(), title, content, tags: noteTags || [], reminder };
+    notes.push(newNote);
+    res.status(201).json({ message: "Note created successfully", note: newNote });
 });
 
 app.patch("/notes/:id", authenticateToken, (req, res) => {
@@ -107,19 +102,22 @@ app.delete("/notes/:id", authenticateToken, (req, res) => {
 });
 
 // Tags routes
+app.get("/tags", authenticateToken, (req, res) => res.status(200).json(tags));
+
 app.post("/tags", authenticateToken, (req, res) => {
     const { name } = req.body;
     if (!name) return res.status(400).json({ message: "Tag name is required" });
-    tags.push({ id: uuidv4(), name });
-    res.status(201).json({ message: "Tag created successfully" });
+
+    const newTag = { id: uuidv4(), name };
+    tags.push(newTag);
+    res.status(201).json({ message: "Tag created successfully", tag: newTag });
 });
 
 app.patch("/tags/:id", authenticateToken, (req, res) => {
     const tag = tags.find(t => t.id === req.params.id);
     if (!tag) return res.status(404).json({ message: "Tag not found" });
-    if (!req.body.name) return res.status(400).json({ message: "Tag name is required" });
 
-    tag.name = req.body.name;
+    tag.name = req.body.name || tag.name;
     res.status(200).json({ message: "Tag updated successfully" });
 });
 
