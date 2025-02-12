@@ -41,9 +41,6 @@ The API is documented using Swagger. You can access the interactive documentatio
 http://localhost:3000/docs/
    ```
 
-## License
-This project is open-source and available for modification and distribution.
-
 ---
 **Happy Coding!** 🚀
 
