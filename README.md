@@ -41,6 +41,4 @@ The API is documented using Swagger. You can access the interactive documentatio
 http://localhost:3000/docs/
    ```
 
----
-**Happy Coding!** 🚀
 

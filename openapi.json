@@ -7,17 +7,33 @@
   },
   "servers": [
     {
-      "url": "/",
-      "description": "Localhost Server"
+      "url": "http://localhost:3000",
+      "description": "Local Development Server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Users",
+      "description": "User management operations"
+    },
+    {
+      "name": "Sessions",
+      "description": "Authentication operations"
+    },
+    {
+      "name": "Notes",
+      "description": "Note management operations"
+    },
+    {
+      "name": "Tags",
+      "description": "Tag management operations"
     }
   ],
   "paths": {
     "/users": {
       "post": {
         "summary": "Register a new user",
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "requestBody": {
           "required": true,
           "content": {
@@ -30,7 +46,31 @@
         },
         "responses": {
           "201": {
-            "description": "User registered successfully"
+            "description": "User registered successfully",
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "URL of the created user"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "User registered successfully"
+                    },
+                    "user": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
           },
           "400": {
             "description": "Invalid request data"
@@ -41,14 +81,8 @@
     "/users/{id}": {
       "patch": {
         "summary": "Update user details",
-        "tags": [
-          "Users"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
+        "tags": ["Users"],
+        "security": [{"bearerAuth": []}],
         "parameters": [
           {
             "name": "id",
@@ -64,6 +98,10 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/UserUpdate"
+              },
+              "example": {
+                "username": "newusername",
+                "password": "newpassword123"
               }
             }
           }
@@ -72,6 +110,9 @@
           "200": {
             "description": "User updated successfully"
           },
+          "401": {
+            "description": "Access denied: Missing or invalid token"
+          },
           "404": {
             "description": "User not found"
           }
@@ -79,14 +120,8 @@
       },
       "delete": {
         "summary": "Delete a user",
-        "tags": [
-          "Users"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
+        "tags": ["Users"],
+        "security": [{"bearerAuth": []}],
         "parameters": [
           {
             "name": "id",
@@ -101,6 +136,9 @@
           "204": {
             "description": "User deleted successfully"
           },
+          "401": {
+            "description": "Access denied: Missing or invalid token"
+          },
           "404": {
             "description": "User not found"
           }
@@ -110,22 +148,33 @@
     "/sessions": {
       "post": {
         "summary": "User login",
-        "tags": [
-          "Sessions"
-        ],
+        "tags": ["Sessions"],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UserLogin"
+                "$ref": "#/components/schemas/User"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "JWT token returned"
+            "description": "JWT token returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string",
+                      "description": "JWT authentication token"
+                    }
+                  }
+                }
+              }
+            }
           },
           "401": {
             "description": "Invalid credentials"
@@ -134,20 +183,14 @@
       },
       "delete": {
         "summary": "User logout",
-        "tags": [
-          "Sessions"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
+        "tags": ["Sessions"],
+        "security": [{"bearerAuth": []}],
         "responses": {
-          "401": {
-            "description": "Access denied: Missing or invalid token"
-          },
           "204": {
             "description": "User logged out successfully"
+          },
+          "401": {
+            "description": "Access denied: Missing or invalid token"
           }
         }
       }
@@ -155,30 +198,28 @@
     "/notes": {
       "get": {
         "summary": "Retrieve all notes",
-        "tags": [
-          "Notes"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
+        "tags": ["Notes"],
+        "security": [{"bearerAuth": []}],
         "responses": {
           "200": {
-            "description": "A list of notes"
+            "description": "A list of notes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Note"
+                  }
+                }
+              }
+            }
           }
         }
       },
       "post": {
         "summary": "Create a new note",
-        "tags": [
-          "Notes"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
+        "tags": ["Notes"],
+        "security": [{"bearerAuth": []}],
         "requestBody": {
           "required": true,
           "content": {
@@ -191,7 +232,34 @@
         },
         "responses": {
           "201": {
-            "description": "Note created successfully"
+            "description": "Note created successfully",
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "URL of the created note"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Note created successfully"
+                    },
+                    "note": {
+                      "$ref": "#/components/schemas/Note"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Access denied: Missing or invalid token"
           }
         }
       }
@@ -199,14 +267,8 @@
     "/notes/{id}": {
       "patch": {
         "summary": "Update a note",
-        "tags": [
-          "Notes"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
+        "tags": ["Notes"],
+        "security": [{"bearerAuth": []}],
         "parameters": [
           {
             "name": "id",
@@ -230,6 +292,22 @@
           "200": {
             "description": "Note updated successfully"
           },
+          "401": {
+            "description": "Access denied: Missing or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Note updated successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
           "404": {
             "description": "Note not found"
           }
@@ -237,14 +315,8 @@
       },
       "delete": {
         "summary": "Delete a note",
-        "tags": [
-          "Notes"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
+        "tags": ["Notes"],
+        "security": [{"bearerAuth": []}],
         "parameters": [
           {
             "name": "id",
@@ -259,6 +331,9 @@
           "204": {
             "description": "Note deleted successfully"
           },
+          "401": {
+            "description": "Access denied: Missing or invalid token"
+          },
           "404": {
             "description": "Note not found"
           }
@@ -268,30 +343,28 @@
     "/tags": {
       "get": {
         "summary": "Retrieve all tags",
-        "tags": [
-          "Tags"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
+        "tags": ["Tags"],
+        "security": [{"bearerAuth": []}],
         "responses": {
           "200": {
-            "description": "A list of tags"
+            "description": "A list of tags",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Tag"
+                  }
+                }
+              }
+            }
           }
         }
       },
       "post": {
         "summary": "Create a new tag",
-        "tags": [
-          "Tags"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
+        "tags": ["Tags"],
+        "security": [{"bearerAuth": []}],
         "requestBody": {
           "required": true,
           "content": {
@@ -304,7 +377,37 @@
         },
         "responses": {
           "201": {
-            "description": "Tag created successfully"
+            "description": "Tag created successfully",
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "URL of the created tag"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Tag created successfully"
+                    },
+                    "tag": {
+                      "$ref": "#/components/schemas/Tag"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Tag name is required"
+          },
+          "401": {
+            "description": "Access denied: Missing or invalid token"
           }
         }
       }
@@ -312,14 +415,8 @@
     "/tags/{id}": {
       "patch": {
         "summary": "Update a tag",
-        "tags": [
-          "Tags"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
+        "tags": ["Tags"],
+        "security": [{"bearerAuth": []}],
         "parameters": [
           {
             "name": "id",
@@ -343,6 +440,22 @@
           "200": {
             "description": "Tag updated successfully"
           },
+          "401": {
+            "description": "Access denied: Missing or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Tag updated successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
           "404": {
             "description": "Tag not found"
           }
@@ -350,14 +463,8 @@
       },
       "delete": {
         "summary": "Delete a tag",
-        "tags": [
-          "Tags"
-        ],
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
+        "tags": ["Tags"],
+        "security": [{"bearerAuth": []}],
         "parameters": [
           {
             "name": "id",
@@ -372,6 +479,9 @@
           "204": {
             "description": "Tag deleted successfully"
           },
+          "401": {
+            "description": "Access denied: Missing or invalid token"
+          },
           "404": {
             "description": "Tag not found"
           }
@@ -380,26 +490,32 @@
     }
   },
   "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
     "schemas": {
       "User": {
         "type": "object",
+        "required": ["username", "password"],
         "properties": {
           "id": {
             "type": "string",
             "format": "uuid"
           },
           "username": {
-            "type": "string"
+            "type": "string",
+            "example": "johndoe"
           },
           "password": {
             "type": "string",
-            "format": "password"
+            "format": "password",
+            "example": "secretpassword123"
           }
-        },
-        "required": [
-          "username",
-          "password"
-        ]
+        }
       },
       "UserUpdate": {
         "type": "object",
@@ -413,65 +529,48 @@
           }
         }
       },
-      "UserLogin": {
-        "type": "object",
-        "properties": {
-          "username": {
-            "type": "string"
-          },
-          "password": {
-            "type": "string",
-            "format": "password"
-          }
-        },
-        "required": [
-          "username",
-          "password"
-        ]
-      },
       "Note": {
         "type": "object",
+        "required": ["title", "content"],
         "properties": {
           "id": {
             "type": "string",
             "format": "uuid"
           },
           "title": {
-            "type": "string"
+            "type": "string",
+            "example": "Shopping List"
           },
           "content": {
-            "type": "string"
+            "type": "string",
+            "example": "1. Milk\n2. Bread\n3. Eggs"
           },
           "tags": {
             "type": "array",
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/Tag"
             }
           },
           "reminder": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "example": "2025-02-13T10:00:00Z"
           }
-        },
-        "required": [
-          "title",
-          "content"
-        ]
+        }
       },
       "Tag": {
         "type": "object",
+        "required": ["name"],
         "properties": {
           "id": {
             "type": "string",
             "format": "uuid"
           },
           "name": {
-            "type": "string"
+            "type": "string",
+            "example": "work"
           }
-        },
-        "required": [
-          "name"
-        ]
+        }
       }
     }
   }
