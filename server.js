@@ -43,8 +43,9 @@ app.post("/users", async (req, res) => {
     if (!username || !password) return res.status(400).json({ message: "Username and password are required" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    users.push({ id: uuidv4(), username, password: hashedPassword });
-    res.status(201).json({ message: "User registered successfully" });
+    const newUser = { id: uuidv4(), username, password: hashedPassword };
+    users.push(newUser);
+    res.status(201).location(`/users/${newUser.id}`).json({ message: "User registered successfully", user: newUser });
 });
 
 app.patch("/users/:id", authenticateToken, async (req, res) => {
@@ -85,7 +86,7 @@ app.post("/notes", authenticateToken, (req, res) => {
 
     const newNote = { id: uuidv4(), title, content, tags: noteTags || [], reminder };
     notes.push(newNote);
-    res.status(201).json({ message: "Note created successfully", note: newNote });
+    res.status(201).location(`/notes/${newNote.id}`).json({ message: "Note created successfully", note: newNote });
 });
 
 app.patch("/notes/:id", authenticateToken, (req, res) => {
@@ -110,7 +111,7 @@ app.post("/tags", authenticateToken, (req, res) => {
 
     const newTag = { id: uuidv4(), name };
     tags.push(newTag);
-    res.status(201).json({ message: "Tag created successfully", tag: newTag });
+    res.status(201).location(`/tags/${newTag.id}`).json({ message: "Tag created successfully", tag: newTag });
 });
 
 app.patch("/tags/:id", authenticateToken, (req, res) => {

@@ -35,11 +35,11 @@ The server will start at:
 
 ### API Documentation
 
-Once the server is running, you can access API documentation at:
-   ```
-   http://localhost:3000/docs
-   ```
 
+The API is documented using Swagger. You can access the interactive documentation at: 
+   ```
+http://localhost:3000/docs/
+   ```
 
 ## License
 This project is open-source and available for modification and distribution.
