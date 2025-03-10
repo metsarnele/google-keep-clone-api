@@ -1,14 +1,14 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "title": "Google Keep Clone API",
+    "title": "Google Keep Clone API (English)",
     "version": "1.0.0",
     "description": "A RESTful API that replicates the core functionalities of Google Keep, allowing users to create, update, delete, and retrieve notes with tags and reminders. Supports user authentication and session management."
   },
   "servers": [
     {
-      "url": "http://localhost:3000",
-      "description": "Local Development Server"
+      "url": "/",
+      "description": "English Documentation"
     }
   ],
   "tags": [
@@ -40,6 +40,10 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/User"
+              },
+              "example": {
+                "username": "johndoe",
+                "password": "password123"
               }
             }
           }
@@ -155,6 +159,10 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/User"
+              },
+              "example": {
+                "username": "johndoe",
+                "password": "password123"
               }
             }
           }
@@ -213,6 +221,9 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Access denied: Missing or invalid token"
           }
         }
       },
@@ -226,6 +237,12 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/Note"
+              },
+              "example": {
+                "title": "Shopping List",
+                "content": "1. Milk\n2. Bread\n3. Eggs",
+                "tags": ["shopping", "groceries"],
+                "reminder": "2025-03-11T10:00:00Z"
               }
             }
           }
@@ -258,6 +275,9 @@
               }
             }
           },
+          "400": {
+            "description": "Invalid request: Missing title or content"
+          },
           "401": {
             "description": "Access denied: Missing or invalid token"
           }
@@ -274,6 +294,7 @@
             "name": "id",
             "in": "path",
             "required": true,
+            "description": "ID of the note to update",
             "schema": {
               "type": "string"
             }
@@ -284,16 +305,19 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/Note"
+              },
+              "example": {
+                "title": "Updated Shopping List",
+                "content": "1. Milk\n2. Bread\n3. Eggs\n4. Cheese",
+                "tags": ["shopping", "groceries", "urgent"],
+                "reminder": "2025-03-11T15:00:00Z"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Note updated successfully"
-          },
-          "401": {
-            "description": "Access denied: Missing or invalid token",
+            "description": "Note updated successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -307,6 +331,9 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Access denied: Missing or invalid token"
           },
           "404": {
             "description": "Note not found"
@@ -322,6 +349,7 @@
             "name": "id",
             "in": "path",
             "required": true,
+            "description": "ID of the note to delete",
             "schema": {
               "type": "string"
             }
@@ -358,6 +386,9 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Access denied: Missing or invalid token"
           }
         }
       },
@@ -371,6 +402,9 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/Tag"
+              },
+              "example": {
+                "name": "shopping"
               }
             }
           }
@@ -422,26 +456,28 @@
             "name": "id",
             "in": "path",
             "required": true,
+            "description": "ID of the tag to update",
             "schema": {
               "type": "string"
             }
           }
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/Tag"
+              },
+              "example": {
+                "name": "urgent-shopping"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Tag updated successfully"
-          },
-          "401": {
-            "description": "Access denied: Missing or invalid token",
+            "description": "Tag updated successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -456,8 +492,28 @@
               }
             }
           },
+          "400": {
+            "description": "Invalid request: Missing tag name"
+          },
+          "401": {
+            "description": "Access denied: Missing or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "404": {
-            "description": "Tag not found"
+            "description": "Tag not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       },
@@ -470,6 +526,7 @@
             "name": "id",
             "in": "path",
             "required": true,
+            "description": "ID of the tag to delete",
             "schema": {
               "type": "string"
             }
@@ -480,97 +537,139 @@
             "description": "Tag deleted successfully"
           },
           "401": {
-            "description": "Access denied: Missing or invalid token"
+            "description": "Access denied: Missing or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           },
           "404": {
-            "description": "Tag not found"
+            "description": "Tag not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
     }
   },
   "components": {
-    "securitySchemes": {
-      "bearerAuth": {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "JWT"
-      }
-    },
     "schemas": {
+      "Error": {
+        "type": "object",
+        "description": "Standard error response format",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Error message",
+            "example": "Invalid credentials"
+          }
+        }
+      },
       "User": {
         "type": "object",
         "required": ["username", "password"],
+        "description": "User account information",
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Unique identifier for the user"
           },
           "username": {
             "type": "string",
-            "example": "johndoe"
+            "example": "johndoe",
+            "description": "Username for login"
           },
           "password": {
             "type": "string",
             "format": "password",
-            "example": "secretpassword123"
+            "example": "secretpassword123",
+            "description": "User's password (hashed when stored)"
           }
         }
       },
       "UserUpdate": {
         "type": "object",
+        "description": "User information that can be updated",
         "properties": {
           "username": {
-            "type": "string"
+            "type": "string",
+            "description": "New username"
           },
           "password": {
             "type": "string",
-            "format": "password"
+            "format": "password",
+            "description": "New password"
           }
         }
       },
       "Note": {
         "type": "object",
         "required": ["title", "content"],
+        "description": "A note with title, content, optional tags, and reminder",
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Unique identifier for the note"
           },
           "title": {
             "type": "string",
-            "example": "Shopping List"
+            "example": "Shopping List",
+            "description": "Title of the note"
           },
           "content": {
             "type": "string",
-            "example": "1. Milk\n2. Bread\n3. Eggs"
+            "example": "1. Milk\n2. Bread\n3. Eggs",
+            "description": "Content of the note"
           },
           "tags": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/Tag"
-            }
+            },
+            "description": "List of tags associated with the note"
           },
           "reminder": {
             "type": "string",
             "format": "date-time",
-            "example": "2025-02-13T10:00:00Z"
+            "example": "2025-02-13T10:00:00Z",
+            "description": "Optional reminder date and time"
           }
         }
       },
       "Tag": {
         "type": "object",
         "required": ["name"],
+        "description": "A tag for categorizing notes",
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "Unique identifier for the tag"
           },
           "name": {
             "type": "string",
-            "example": "work"
+            "example": "work",
+            "description": "Name of the tag"
           }
         }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT token for authentication"
       }
     }
   }

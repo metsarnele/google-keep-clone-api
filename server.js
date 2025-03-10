@@ -20,13 +20,81 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // Load OpenAPI documentation in both languages
-const swaggerDocumentEn = JSON.parse(fs.readFileSync(path.join(__dirname, "openapi.json"), "utf8"));
-const swaggerDocumentEt = JSON.parse(fs.readFileSync(path.join(__dirname, "openapi.et.json"), "utf8"));
+const openApiPath = path.join(__dirname, "openapi.json");
+const openApiEtPath = path.join(__dirname, "openapi.et.json");
 
-// Serve documentation in both languages
-app.use("/docs/en", swaggerUi.serve, swaggerUi.setup(swaggerDocumentEn));
-app.use("/docs/et", swaggerUi.serve, swaggerUi.setup(swaggerDocumentEt));
-app.use("/docs", (req, res) => res.redirect("/docs/en")); // Default to English
+// Add cache control middleware
+const cacheControl = (req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    next();
+};
+
+// Configure base Swagger UI options
+const swaggerUiOptions = {
+    explorer: true,
+    persistAuthorization: true,
+    displayRequestDuration: true,
+    filter: true,
+    swaggerOptions: {
+        docExpansion: 'list',
+        defaultModelsExpandDepth: 3,
+        defaultModelExpandDepth: 3,
+        defaultModelRendering: 'model',
+        displayOperationId: false,
+        showCommonExtensions: true,
+        showExtensions: true,
+        deepLinking: true,
+        tryItOutEnabled: true
+    }
+};
+
+// English documentation route
+app.get(['/docs/en', '/docs/en/'], cacheControl, (req, res, next) => {
+    try {
+        const swaggerDocumentEn = JSON.parse(fs.readFileSync(openApiPath, "utf8"));
+        swaggerDocumentEn.servers = [{ url: '/' }];
+        
+        const enOptions = {
+            ...swaggerUiOptions,
+            customSiteTitle: "Google Keep API Documentation (English)",
+            swaggerDoc: swaggerDocumentEn
+        };
+        
+        swaggerUi.setup(swaggerDocumentEn, enOptions)(req, res, next);
+    } catch (error) {
+        console.error('Error serving English documentation:', error);
+        res.status(500).send('Error loading documentation');
+    }
+});
+
+// Estonian documentation route
+app.get(['/docs/et', '/docs/et/'], cacheControl, (req, res, next) => {
+    try {
+        const swaggerDocumentEt = JSON.parse(fs.readFileSync(openApiEtPath, "utf8"));
+        swaggerDocumentEt.servers = [{ url: '/' }];
+        
+        const etOptions = {
+            ...swaggerUiOptions,
+            customSiteTitle: "Google Keep API Dokumentatsioon (Eesti)",
+            swaggerDoc: swaggerDocumentEt
+        };
+        
+        swaggerUi.setup(swaggerDocumentEt, etOptions)(req, res, next);
+    } catch (error) {
+        console.error('Error serving Estonian documentation:', error);
+        res.status(500).send('Error loading documentation');
+    }
+});
+
+// Serve Swagger UI assets
+app.use(['/docs/en', '/docs/en/', '/docs/et', '/docs/et/'], swaggerUi.serve);
+
+// Default route - redirect to English
+app.get(['/docs', '/docs/'], cacheControl, (req, res) => {
+    res.redirect(302, '/docs/en/');
+});
 
 let users = [];
 let notes = [];
@@ -137,12 +205,12 @@ app.get("/", (req, res) => res.send(`
     <h1>Welcome to Google Keep API</h1>
     <h2>Documentation / Dokumentatsioon:</h2>
     <ul>
-      <li><a href='/docs/en'>API Documentation (English)</a></li>
-      <li><a href='/docs/et'>API Dokumentatsioon (Eesti)</a></li>
+      <li><a href='/docs/en/'>API Documentation (English)</a></li>
+      <li><a href='/docs/et/'>API Dokumentatsioon (Eesti)</a></li>
     </ul>
   `));
 
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
-    console.log(`API documentation available at http://localhost:${PORT}/docs`);
+    console.log(`API documentation available at http://localhost:${PORT}/docs/`);
 });
