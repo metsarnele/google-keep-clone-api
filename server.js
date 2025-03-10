@@ -19,8 +19,14 @@ const SECRET_KEY = "your_secret_key";
 app.use(cors());
 app.use(bodyParser.json());
 
-const swaggerDocument = JSON.parse(fs.readFileSync(path.join(__dirname, "openapi.json"), "utf8"));
-app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+// Load OpenAPI documentation in both languages
+const swaggerDocumentEn = JSON.parse(fs.readFileSync(path.join(__dirname, "openapi.json"), "utf8"));
+const swaggerDocumentEt = JSON.parse(fs.readFileSync(path.join(__dirname, "openapi.et.json"), "utf8"));
+
+// Serve documentation in both languages
+app.use("/docs/en", swaggerUi.serve, swaggerUi.setup(swaggerDocumentEn));
+app.use("/docs/et", swaggerUi.serve, swaggerUi.setup(swaggerDocumentEt));
+app.use("/docs", (req, res) => res.redirect("/docs/en")); // Default to English
 
 let users = [];
 let notes = [];
@@ -127,7 +133,14 @@ app.delete("/tags/:id", authenticateToken, (req, res) => {
     res.status(204).send();
 });
 
-app.get("/", (req, res) => res.send("<h1>Welcome to Google Keep API</h1><p>Go to <a href='/docs'>API Documentation</a></p>"));
+app.get("/", (req, res) => res.send(`
+    <h1>Welcome to Google Keep API</h1>
+    <h2>Documentation / Dokumentatsioon:</h2>
+    <ul>
+      <li><a href='/docs/en'>API Documentation (English)</a></li>
+      <li><a href='/docs/et'>API Dokumentatsioon (Eesti)</a></li>
+    </ul>
+  `));
 
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);

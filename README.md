@@ -35,10 +35,20 @@ The server will start at:
 
 ### API Documentation
 
+The API is documented using Swagger. You can access the interactive documentation in both English and Estonian:
 
-The API is documented using Swagger. You can access the interactive documentation at: 
+- English documentation:
    ```
-http://localhost:3000/docs/
+   http://localhost:3000/docs/en
    ```
 
+- Estonian documentation:
+   ```
+   http://localhost:3000/docs/et
+   ```
+
+Or visit the root documentation page which defaults to English:
+   ```
+   http://localhost:3000/docs
+   ```
 
