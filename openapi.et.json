@@ -1,14 +1,18 @@
 {
   "openapi": "3.0.0",
   "info": {
+
     "title": "Google Keep Clone API (Eesti)",
+
     "version": "1.0.0",
     "description": "RESTful API, mis jäljendab Google Keep'i põhifunktsionaalsust, võimaldades kasutajatel luua, uuendada, kustutada ja vaadata märkmeid koos siltide ja meeldetuletustega. Toetab kasutajate autentimist ja seansihaldust."
   },
   "servers": [
     {
+
       "url": "/",
       "description": "Eesti Dokumentatsioon"
+
     }
   ],
   "tags": [

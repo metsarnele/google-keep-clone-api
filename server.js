@@ -20,6 +20,7 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // Load OpenAPI documentation in both languages
+
 const openApiPath = path.join(__dirname, "openapi.json");
 const openApiEtPath = path.join(__dirname, "openapi.et.json");
 
@@ -95,6 +96,7 @@ app.use(['/docs/en', '/docs/en/', '/docs/et', '/docs/et/'], swaggerUi.serve);
 app.get(['/docs', '/docs/'], cacheControl, (req, res) => {
     res.redirect(302, '/docs/en/');
 });
+
 
 let users = [];
 let notes = [];
@@ -205,8 +207,10 @@ app.get("/", (req, res) => res.send(`
     <h1>Welcome to Google Keep API</h1>
     <h2>Documentation / Dokumentatsioon:</h2>
     <ul>
+
       <li><a href='/docs/en/'>API Documentation (English)</a></li>
       <li><a href='/docs/et/'>API Dokumentatsioon (Eesti)</a></li>
+
     </ul>
   `));
 
