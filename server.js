@@ -36,7 +36,12 @@ const DOCS_ET_URL = `${DOCS_BASE_URL}/et`;
 // API URLs
 const API_URL = isProd ? 'https://keep-api.nele.my' : `http://localhost:${PORT}`;
 
-app.use(cors());
+// Configure CORS to allow requests from any origin
+app.use(cors({
+  origin: '*',  // Allow all origins
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(bodyParser.json());
 
 // Load OpenAPI documentation in both languages
@@ -228,10 +233,8 @@ app.get("/", (req, res) => res.send(`
     <h1>Welcome to Google Keep API</h1>
     <h2>Documentation / Dokumentatsioon:</h2>
     <ul>
-
       <li><a href='${DOCS_EN_URL}/'>API Documentation (English)</a></li>
       <li><a href='${DOCS_ET_URL}/'>API Dokumentatsioon (Eesti)</a></li>
-
     </ul>
   `));
 
