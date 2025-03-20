@@ -140,6 +140,18 @@ const authenticateToken = (req, res, next) => {
 };
 
 // User routes
+// Route for /users (without /api prefix)
+app.post("/users", async (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) return res.status(400).json({ message: "Username and password are required" });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = { id: uuidv4(), username, password: hashedPassword };
+    users.push(newUser);
+    res.status(201).location(`/api/users/${newUser.id}`).json({ message: "User registered successfully", user: newUser });
+});
+
+// Route for /api/users
 app.post("/api/users", async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ message: "Username and password are required" });
@@ -148,6 +160,16 @@ app.post("/api/users", async (req, res) => {
     const newUser = { id: uuidv4(), username, password: hashedPassword };
     users.push(newUser);
     res.status(201).location(`/api/users/${newUser.id}`).json({ message: "User registered successfully", user: newUser });
+});
+
+app.patch("/users/:id", authenticateToken, async (req, res) => {
+    const user = users.find(u => u.id === req.params.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (req.body.password) user.password = await bcrypt.hash(req.body.password, 10);
+    if (req.body.username) user.username = req.body.username;
+
+    res.status(200).json({ message: "User updated successfully" });
 });
 
 app.patch("/api/users/:id", authenticateToken, async (req, res) => {
@@ -160,12 +182,28 @@ app.patch("/api/users/:id", authenticateToken, async (req, res) => {
     res.status(200).json({ message: "User updated successfully" });
 });
 
+app.delete("/users/:id", authenticateToken, (req, res) => {
+    users = users.filter(u => u.id !== req.params.id);
+    res.status(204).send();
+});
+
 app.delete("/api/users/:id", authenticateToken, (req, res) => {
     users = users.filter(u => u.id !== req.params.id);
     res.status(204).send();
 });
 
 // Session routes
+// Route for /sessions (without /api prefix)
+app.post("/sessions", async (req, res) => {
+    const { username, password } = req.body;
+    const user = users.find(u => u.username === username);
+    if (!user || !(await bcrypt.compare(password, user.password))) return res.status(401).json({ message: "Invalid credentials" });
+
+    const token = jwt.sign({ id: user.id, username: user.username }, SECRET_KEY, { expiresIn: "1h" });
+    res.status(200).json({ token });
+});
+
+// Route for /api/sessions
 app.post("/api/sessions", async (req, res) => {
     const { username, password } = req.body;
     const user = users.find(u => u.username === username);
@@ -175,12 +213,29 @@ app.post("/api/sessions", async (req, res) => {
     res.status(200).json({ token });
 });
 
+app.delete("/sessions", authenticateToken, (req, res) => {
+    res.status(204).send();
+});
+
 app.delete("/api/sessions", authenticateToken, (req, res) => {
     res.status(204).send();
 });
 
 // Notes routes
+// Routes without /api prefix
+app.get("/notes", authenticateToken, (req, res) => res.status(200).json(notes));
+
+// Routes with /api prefix
 app.get("/api/notes", authenticateToken, (req, res) => res.status(200).json(notes));
+
+app.post("/notes", authenticateToken, (req, res) => {
+    const { title, content, tags: noteTags, reminder } = req.body;
+    if (!title || !content) return res.status(400).json({ message: "Title and content are required" });
+
+    const newNote = { id: uuidv4(), title, content, tags: noteTags || [], reminder };
+    notes.push(newNote);
+    res.status(201).location(`/api/notes/${newNote.id}`).json({ message: "Note created successfully", note: newNote });
+});
 
 app.post("/api/notes", authenticateToken, (req, res) => {
     const { title, content, tags: noteTags, reminder } = req.body;
@@ -191,6 +246,14 @@ app.post("/api/notes", authenticateToken, (req, res) => {
     res.status(201).location(`/api/notes/${newNote.id}`).json({ message: "Note created successfully", note: newNote });
 });
 
+app.patch("/notes/:id", authenticateToken, (req, res) => {
+    const note = notes.find(n => n.id === req.params.id);
+    if (!note) return res.status(404).json({ message: "Note not found" });
+
+    Object.assign(note, req.body);
+    res.status(200).json({ message: "Note updated successfully" });
+});
+
 app.patch("/api/notes/:id", authenticateToken, (req, res) => {
     const note = notes.find(n => n.id === req.params.id);
     if (!note) return res.status(404).json({ message: "Note not found" });
@@ -199,13 +262,31 @@ app.patch("/api/notes/:id", authenticateToken, (req, res) => {
     res.status(200).json({ message: "Note updated successfully" });
 });
 
+app.delete("/notes/:id", authenticateToken, (req, res) => {
+    notes = notes.filter(n => n.id !== req.params.id);
+    res.status(204).send();
+});
+
 app.delete("/api/notes/:id", authenticateToken, (req, res) => {
     notes = notes.filter(n => n.id !== req.params.id);
     res.status(204).send();
 });
 
 // Tags routes
+// Routes without /api prefix
+app.get("/tags", authenticateToken, (req, res) => res.status(200).json(tags));
+
+// Routes with /api prefix
 app.get("/api/tags", authenticateToken, (req, res) => res.status(200).json(tags));
+
+app.post("/tags", authenticateToken, (req, res) => {
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ message: "Tag name is required" });
+
+    const newTag = { id: uuidv4(), name };
+    tags.push(newTag);
+    res.status(201).location(`/api/tags/${newTag.id}`).json({ message: "Tag created successfully", tag: newTag });
+});
 
 app.post("/api/tags", authenticateToken, (req, res) => {
     const { name } = req.body;
@@ -216,12 +297,25 @@ app.post("/api/tags", authenticateToken, (req, res) => {
     res.status(201).location(`/api/tags/${newTag.id}`).json({ message: "Tag created successfully", tag: newTag });
 });
 
+app.patch("/tags/:id", authenticateToken, (req, res) => {
+    const tag = tags.find(t => t.id === req.params.id);
+    if (!tag) return res.status(404).json({ message: "Tag not found" });
+
+    tag.name = req.body.name || tag.name;
+    res.status(200).json({ message: "Tag updated successfully" });
+});
+
 app.patch("/api/tags/:id", authenticateToken, (req, res) => {
     const tag = tags.find(t => t.id === req.params.id);
     if (!tag) return res.status(404).json({ message: "Tag not found" });
 
     tag.name = req.body.name || tag.name;
     res.status(200).json({ message: "Tag updated successfully" });
+});
+
+app.delete("/tags/:id", authenticateToken, (req, res) => {
+    tags = tags.filter(t => t.id !== req.params.id);
+    res.status(204).send();
 });
 
 app.delete("/api/tags/:id", authenticateToken, (req, res) => {
