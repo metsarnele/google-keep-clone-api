@@ -52,10 +52,10 @@ const swaggerUiOptions = {
 };
 
 // English documentation route
-app.get(['/docs/en', '/docs/en/'], cacheControl, (req, res, next) => {
+app.get(['/en', '/en/'], cacheControl, (req, res, next) => {
     try {
         const swaggerDocumentEn = JSON.parse(fs.readFileSync(openApiPath, "utf8"));
-        swaggerDocumentEn.servers = [{ url: '/' }];
+        swaggerDocumentEn.servers = [{ url: 'https://docs.example.com/' }];
         
         const enOptions = {
             ...swaggerUiOptions,
@@ -71,10 +71,10 @@ app.get(['/docs/en', '/docs/en/'], cacheControl, (req, res, next) => {
 });
 
 // Estonian documentation route
-app.get(['/docs/et', '/docs/et/'], cacheControl, (req, res, next) => {
+app.get(['/et', '/et/'], cacheControl, (req, res, next) => {
     try {
         const swaggerDocumentEt = JSON.parse(fs.readFileSync(openApiEtPath, "utf8"));
-        swaggerDocumentEt.servers = [{ url: '/' }];
+        swaggerDocumentEt.servers = [{ url: 'https://docs.example.com/' }];
         
         const etOptions = {
             ...swaggerUiOptions,
@@ -90,11 +90,11 @@ app.get(['/docs/et', '/docs/et/'], cacheControl, (req, res, next) => {
 });
 
 // Serve Swagger UI assets
-app.use(['/docs/en', '/docs/en/', '/docs/et', '/docs/et/'], swaggerUi.serve);
+app.use(['/en', '/en/', '/et', '/et/'], swaggerUi.serve);
 
 // Default route - redirect to English
-app.get(['/docs', '/docs/'], cacheControl, (req, res) => {
-    res.redirect(302, '/docs/en/');
+app.get(['/', '/docs', '/docs/'], cacheControl, (req, res) => {
+    res.redirect(302, '/en/');
 });
 
 
