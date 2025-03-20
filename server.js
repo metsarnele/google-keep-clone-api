@@ -13,8 +13,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
+const NODE_ENV = process.env.NODE_ENV || 'development';
 const SECRET_KEY = "your_secret_key";
+
+// Determine base URL based on environment
+const isProd = NODE_ENV === 'production';
+const BASE_URL = isProd ? 'https://docs.nele.my' : `http://localhost:${PORT}`;
+const API_URL = isProd ? 'https://api.nele.my' : `http://localhost:${PORT}`;
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -51,18 +57,39 @@ const swaggerUiOptions = {
     }
 };
 
+// Create separate instances of swagger-ui-express for each language
+const swaggerUiEn = swaggerUi;
+// Use the same instance for both languages
+const swaggerUiEt = swaggerUi;
+
+// Parse OpenAPI specs
+const swaggerDocEn = JSON.parse(fs.readFileSync(openApiPath, "utf8"));
+const swaggerDocEt = JSON.parse(fs.readFileSync(openApiEtPath, "utf8"));
+
+// Set server URLs to ensure they point to the correct endpoints
+swaggerDocEn.servers = [{ url: API_URL, description: 'English API' }];
+swaggerDocEt.servers = [{ url: API_URL, description: 'Estonian API' }];
+
 // Serve English Swagger UI at `/en`
-app.use('/en', swaggerUi.serve, swaggerUi.setup(JSON.parse(fs.readFileSync(openApiPath, "utf8")), {
-    customSiteTitle: "Google Keep API Documentation (English)"
-}));
+app.use('/en', swaggerUiEn.serve);
+app.get('/en', (req, res) => {
+    let html = swaggerUiEn.generateHTML(swaggerDocEn, {
+        ...swaggerUiOptions,
+        customSiteTitle: "Google Keep API Documentation (English)"
+    });
+    res.send(html);
+});
 
 // Serve Estonian Swagger UI at `/et`
-app.use('/et', swaggerUi.serve, swaggerUi.setup(JSON.parse(fs.readFileSync(openApiEtPath, "utf8")), {
-    customSiteTitle: "Google Keep API Dokumentatsioon (Eesti)"
-}));
+app.use('/et', swaggerUiEt.serve);
+app.get('/et', (req, res) => {
+    let html = swaggerUiEt.generateHTML(swaggerDocEt, {
+        ...swaggerUiOptions,
+        customSiteTitle: "Google Keep API Dokumentatsioon (Eesti)"
+    });
+    res.send(html);
+});
 
-// Serve Swagger UI assets
-app.use(['/docs/en', '/docs/en/', '/docs/et', '/docs/et/'], swaggerUi.serve);
 
 
 
@@ -177,13 +204,15 @@ app.get("/", (req, res) => res.send(`
     <h2>Documentation / Dokumentatsioon:</h2>
     <ul>
 
-      <li><a href='https://docs.nele.my/en/'>API Documentation (English)</a></li>
-      <li><a href='https://docs.nele.my/et/'>API Dokumentatsioon (Eesti)</a></li>
+      <li><a href='${BASE_URL}/en/'>API Documentation (English)</a></li>
+      <li><a href='${BASE_URL}/et/'>API Dokumentatsioon (Eesti)</a></li>
 
     </ul>
   `));
 
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-    console.log(`API documentation available at http://localhost:${PORT}/docs/`);
+    console.log(`Server is running in ${NODE_ENV} mode on port ${PORT}`);
+    console.log(`API documentation available at:`);
+    console.log(`- English: ${BASE_URL}/en/`);
+    console.log(`- Estonian: ${BASE_URL}/et/`);
 });
