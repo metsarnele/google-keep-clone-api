@@ -34,7 +34,7 @@ const DOCS_EN_URL = `${DOCS_BASE_URL}/en`;
 const DOCS_ET_URL = `${DOCS_BASE_URL}/et`;
 
 // API URLs
-const API_URL = isProd ? 'https://api.nele.my' : `http://localhost:${PORT}`;
+const API_URL = isProd ? 'https://keep-api.nele.my' : `http://localhost:${PORT}`;
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -82,12 +82,12 @@ const swaggerDocEt = JSON.parse(fs.readFileSync(openApiEtPath, "utf8"));
 
 // Set server URLs to ensure they point to the correct endpoints
 swaggerDocEn.servers = [{ 
-    url: isProd ? 'https://api.nele.my' : '/', 
+    url: isProd ? 'https://keep-api.nele.my' : '/', 
     description: isProd ? 'Production API (English)' : 'Local Development API (English)' 
 }];
 
 swaggerDocEt.servers = [{ 
-    url: isProd ? 'https://api.nele.my' : '/', 
+    url: isProd ? 'https://keep-api.nele.my' : '/', 
     description: isProd ? 'Production API (Estonian)' : 'Local Development API (Estonian)' 
 }];
 
@@ -135,17 +135,17 @@ const authenticateToken = (req, res, next) => {
 };
 
 // User routes
-app.post("/users", async (req, res) => {
+app.post("/api/users", async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ message: "Username and password are required" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = { id: uuidv4(), username, password: hashedPassword };
     users.push(newUser);
-    res.status(201).location(`/users/${newUser.id}`).json({ message: "User registered successfully", user: newUser });
+    res.status(201).location(`/api/users/${newUser.id}`).json({ message: "User registered successfully", user: newUser });
 });
 
-app.patch("/users/:id", authenticateToken, async (req, res) => {
+app.patch("/api/users/:id", authenticateToken, async (req, res) => {
     const user = users.find(u => u.id === req.params.id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
@@ -155,13 +155,13 @@ app.patch("/users/:id", authenticateToken, async (req, res) => {
     res.status(200).json({ message: "User updated successfully" });
 });
 
-app.delete("/users/:id", authenticateToken, (req, res) => {
+app.delete("/api/users/:id", authenticateToken, (req, res) => {
     users = users.filter(u => u.id !== req.params.id);
     res.status(204).send();
 });
 
 // Session routes
-app.post("/sessions", async (req, res) => {
+app.post("/api/sessions", async (req, res) => {
     const { username, password } = req.body;
     const user = users.find(u => u.username === username);
     if (!user || !(await bcrypt.compare(password, user.password))) return res.status(401).json({ message: "Invalid credentials" });
@@ -170,23 +170,23 @@ app.post("/sessions", async (req, res) => {
     res.status(200).json({ token });
 });
 
-app.delete("/sessions", authenticateToken, (req, res) => {
+app.delete("/api/sessions", authenticateToken, (req, res) => {
     res.status(204).send();
 });
 
 // Notes routes
-app.get("/notes", authenticateToken, (req, res) => res.status(200).json(notes));
+app.get("/api/notes", authenticateToken, (req, res) => res.status(200).json(notes));
 
-app.post("/notes", authenticateToken, (req, res) => {
+app.post("/api/notes", authenticateToken, (req, res) => {
     const { title, content, tags: noteTags, reminder } = req.body;
     if (!title || !content) return res.status(400).json({ message: "Title and content are required" });
 
     const newNote = { id: uuidv4(), title, content, tags: noteTags || [], reminder };
     notes.push(newNote);
-    res.status(201).location(`/notes/${newNote.id}`).json({ message: "Note created successfully", note: newNote });
+    res.status(201).location(`/api/notes/${newNote.id}`).json({ message: "Note created successfully", note: newNote });
 });
 
-app.patch("/notes/:id", authenticateToken, (req, res) => {
+app.patch("/api/notes/:id", authenticateToken, (req, res) => {
     const note = notes.find(n => n.id === req.params.id);
     if (!note) return res.status(404).json({ message: "Note not found" });
 
@@ -194,24 +194,24 @@ app.patch("/notes/:id", authenticateToken, (req, res) => {
     res.status(200).json({ message: "Note updated successfully" });
 });
 
-app.delete("/notes/:id", authenticateToken, (req, res) => {
+app.delete("/api/notes/:id", authenticateToken, (req, res) => {
     notes = notes.filter(n => n.id !== req.params.id);
     res.status(204).send();
 });
 
 // Tags routes
-app.get("/tags", authenticateToken, (req, res) => res.status(200).json(tags));
+app.get("/api/tags", authenticateToken, (req, res) => res.status(200).json(tags));
 
-app.post("/tags", authenticateToken, (req, res) => {
+app.post("/api/tags", authenticateToken, (req, res) => {
     const { name } = req.body;
     if (!name) return res.status(400).json({ message: "Tag name is required" });
 
     const newTag = { id: uuidv4(), name };
     tags.push(newTag);
-    res.status(201).location(`/tags/${newTag.id}`).json({ message: "Tag created successfully", tag: newTag });
+    res.status(201).location(`/api/tags/${newTag.id}`).json({ message: "Tag created successfully", tag: newTag });
 });
 
-app.patch("/tags/:id", authenticateToken, (req, res) => {
+app.patch("/api/tags/:id", authenticateToken, (req, res) => {
     const tag = tags.find(t => t.id === req.params.id);
     if (!tag) return res.status(404).json({ message: "Tag not found" });
 
@@ -219,7 +219,7 @@ app.patch("/tags/:id", authenticateToken, (req, res) => {
     res.status(200).json({ message: "Tag updated successfully" });
 });
 
-app.delete("/tags/:id", authenticateToken, (req, res) => {
+app.delete("/api/tags/:id", authenticateToken, (req, res) => {
     tags = tags.filter(t => t.id !== req.params.id);
     res.status(204).send();
 });
