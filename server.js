@@ -51,51 +51,20 @@ const swaggerUiOptions = {
     }
 };
 
-// English documentation route
-app.get(['/en', '/en/'], cacheControl, (req, res, next) => {
-    try {
-        const swaggerDocumentEn = JSON.parse(fs.readFileSync(openApiPath, "utf8"));
-        swaggerDocumentEn.servers = [{ url: 'https://docs.example.com/' }];
-        
-        const enOptions = {
-            ...swaggerUiOptions,
-            customSiteTitle: "Google Keep API Documentation (English)",
-            swaggerDoc: swaggerDocumentEn
-        };
-        
-        swaggerUi.setup(swaggerDocumentEn, enOptions)(req, res, next);
-    } catch (error) {
-        console.error('Error serving English documentation:', error);
-        res.status(500).send('Error loading documentation');
-    }
-});
+// Serve English Swagger UI at `/en`
+app.use('/en', swaggerUi.serve, swaggerUi.setup(JSON.parse(fs.readFileSync(openApiPath, "utf8")), {
+    customSiteTitle: "Google Keep API Documentation (English)"
+}));
 
-// Estonian documentation route
-app.get(['/et', '/et/'], cacheControl, (req, res, next) => {
-    try {
-        const swaggerDocumentEt = JSON.parse(fs.readFileSync(openApiEtPath, "utf8"));
-        swaggerDocumentEt.servers = [{ url: 'https://docs.example.com/' }];
-        
-        const etOptions = {
-            ...swaggerUiOptions,
-            customSiteTitle: "Google Keep API Dokumentatsioon (Eesti)",
-            swaggerDoc: swaggerDocumentEt
-        };
-        
-        swaggerUi.setup(swaggerDocumentEt, etOptions)(req, res, next);
-    } catch (error) {
-        console.error('Error serving Estonian documentation:', error);
-        res.status(500).send('Error loading documentation');
-    }
-});
+// Serve Estonian Swagger UI at `/et`
+app.use('/et', swaggerUi.serve, swaggerUi.setup(JSON.parse(fs.readFileSync(openApiEtPath, "utf8")), {
+    customSiteTitle: "Google Keep API Dokumentatsioon (Eesti)"
+}));
 
 // Serve Swagger UI assets
-app.use(['/en', '/en/', '/et', '/et/'], swaggerUi.serve);
+app.use(['/docs/en', '/docs/en/', '/docs/et', '/docs/et/'], swaggerUi.serve);
 
-// Default route - redirect to English
-app.get(['/', '/docs', '/docs/'], cacheControl, (req, res) => {
-    res.redirect(302, '/en/');
-});
+
 
 
 let users = [];
@@ -208,8 +177,8 @@ app.get("/", (req, res) => res.send(`
     <h2>Documentation / Dokumentatsioon:</h2>
     <ul>
 
-      <li><a href='/docs/en/'>API Documentation (English)</a></li>
-      <li><a href='/docs/et/'>API Dokumentatsioon (Eesti)</a></li>
+      <li><a href='https://docs.nele.my/en/'>API Documentation (English)</a></li>
+      <li><a href='https://docs.nele.my/et/'>API Dokumentatsioon (Eesti)</a></li>
 
     </ul>
   `));
