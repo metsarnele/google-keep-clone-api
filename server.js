@@ -8,6 +8,9 @@ import path from "path";
 import { fileURLToPath } from "url";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,11 +18,22 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
-const SECRET_KEY = "your_secret_key";
+const SECRET_KEY = process.env.SECRET_KEY;
+
+// Check if SECRET_KEY is set
+if (!SECRET_KEY) {
+  throw new Error('SECRET_KEY is not set. Please set it in your .env file.');
+}
 
 // Determine base URL based on environment
 const isProd = NODE_ENV === 'production';
-const BASE_URL = isProd ? 'https://docs.nele.my' : `http://localhost:${PORT}`;
+
+// Documentation URLs
+const DOCS_BASE_URL = isProd ? 'https://docs.nele.my' : `http://localhost:${PORT}`;
+const DOCS_EN_URL = `${DOCS_BASE_URL}/en`;
+const DOCS_ET_URL = `${DOCS_BASE_URL}/et`;
+
+// API URLs
 const API_URL = isProd ? 'https://api.nele.my' : `http://localhost:${PORT}`;
 
 app.use(cors());
@@ -67,8 +81,19 @@ const swaggerDocEn = JSON.parse(fs.readFileSync(openApiPath, "utf8"));
 const swaggerDocEt = JSON.parse(fs.readFileSync(openApiEtPath, "utf8"));
 
 // Set server URLs to ensure they point to the correct endpoints
-swaggerDocEn.servers = [{ url: API_URL, description: 'English API' }];
-swaggerDocEt.servers = [{ url: API_URL, description: 'Estonian API' }];
+swaggerDocEn.servers = [{ 
+    url: isProd ? 'https://api.nele.my' : '/', 
+    description: isProd ? 'Production API (English)' : 'Local Development API (English)' 
+}];
+
+swaggerDocEt.servers = [{ 
+    url: isProd ? 'https://api.nele.my' : '/', 
+    description: isProd ? 'Production API (Estonian)' : 'Local Development API (Estonian)' 
+}];
+
+// Set Swagger UI URLs based on environment and language
+swaggerDocEn.externalDocs = { url: DOCS_EN_URL, description: 'English Documentation' };
+swaggerDocEt.externalDocs = { url: DOCS_ET_URL, description: 'Eesti Dokumentatsioon' };
 
 // Serve English Swagger UI at `/en`
 app.use('/en', swaggerUiEn.serve);
@@ -204,8 +229,8 @@ app.get("/", (req, res) => res.send(`
     <h2>Documentation / Dokumentatsioon:</h2>
     <ul>
 
-      <li><a href='${BASE_URL}/en/'>API Documentation (English)</a></li>
-      <li><a href='${BASE_URL}/et/'>API Dokumentatsioon (Eesti)</a></li>
+      <li><a href='${DOCS_EN_URL}/'>API Documentation (English)</a></li>
+      <li><a href='${DOCS_ET_URL}/'>API Dokumentatsioon (Eesti)</a></li>
 
     </ul>
   `));
@@ -213,6 +238,6 @@ app.get("/", (req, res) => res.send(`
 app.listen(PORT, () => {
     console.log(`Server is running in ${NODE_ENV} mode on port ${PORT}`);
     console.log(`API documentation available at:`);
-    console.log(`- English: ${BASE_URL}/en/`);
-    console.log(`- Estonian: ${BASE_URL}/et/`);
+    console.log(`- English: ${DOCS_EN_URL}/`);
+    console.log(`- Estonian: ${DOCS_ET_URL}/`);
 });
