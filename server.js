@@ -29,7 +29,7 @@ if (!SECRET_KEY) {
 const isProd = NODE_ENV === 'production';
 
 // Documentation URLs
-const DOCS_BASE_URL = isProd ? 'https://docs.nele.my' : `http://localhost:${PORT}`;
+const DOCS_BASE_URL = isProd ? 'https://keep-docs.nele.my' : `http://localhost:${PORT}`;
 const DOCS_EN_URL = `${DOCS_BASE_URL}/en`;
 const DOCS_ET_URL = `${DOCS_BASE_URL}/et`;
 
