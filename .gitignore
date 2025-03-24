@@ -2,3 +2,14 @@ node_modules/
 .idea/
 .env
 nginx.conf
+
+# Data files
+data/
+*.json
+!package.json
+!package-lock.json
+!openapi.json
+!openapi.et.json
+
+# Temporary files
+start-dev.js

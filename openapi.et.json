@@ -1,18 +1,14 @@
 {
   "openapi": "3.0.0",
   "info": {
-
     "title": "Google Keep Clone API (Eesti)",
-
     "version": "1.0.0",
     "description": "RESTful API, mis jäljendab Google Keep'i põhifunktsionaalsust, võimaldades kasutajatel luua, uuendada, kustutada ja vaadata märkmeid koos siltide ja meeldetuletustega. Toetab kasutajate autentimist ja seansihaldust."
   },
   "servers": [
     {
-
       "url": "/",
       "description": "Eesti Dokumentatsioon"
-
     }
   ],
   "tags": [
@@ -37,7 +33,9 @@
     "/users": {
       "post": {
         "summary": "Registreeri uus kasutaja",
-        "tags": ["Users"],
+        "tags": [
+          "Users"
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -82,6 +80,22 @@
           },
           "400": {
             "description": "Vigased andmed päringus"
+          },
+          "409": {
+            "description": "Kasutaja on juba olemas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Kasutaja on juba olemas"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -89,8 +103,14 @@
     "/users/{id}": {
       "patch": {
         "summary": "Uuenda kasutaja andmeid",
-        "tags": ["Users"],
-        "security": [{"bearerAuth": []}],
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
@@ -128,8 +148,14 @@
       },
       "delete": {
         "summary": "Kustuta kasutaja",
-        "tags": ["Users"],
-        "security": [{"bearerAuth": []}],
+        "tags": [
+          "Users"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
@@ -156,7 +182,9 @@
     "/sessions": {
       "post": {
         "summary": "Kasutaja sisselogimine",
-        "tags": ["Sessions"],
+        "tags": [
+          "Sessions"
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -195,8 +223,14 @@
       },
       "delete": {
         "summary": "Kasutaja väljalogimine",
-        "tags": ["Sessions"],
-        "security": [{"bearerAuth": []}],
+        "tags": [
+          "Sessions"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "responses": {
           "204": {
             "description": "Kasutaja edukalt välja logitud"
@@ -210,8 +244,14 @@
     "/notes": {
       "get": {
         "summary": "Kuva kõik märkmed",
-        "tags": ["Notes"],
-        "security": [{"bearerAuth": []}],
+        "tags": [
+          "Notes"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "responses": {
           "200": {
             "description": "Märkmed edukalt tagastatud",
@@ -233,8 +273,14 @@
       },
       "post": {
         "summary": "Loo uus märge",
-        "tags": ["Notes"],
-        "security": [{"bearerAuth": []}],
+        "tags": [
+          "Notes"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -245,7 +291,10 @@
               "example": {
                 "title": "Märkme pealkiri",
                 "content": "Märkme sisu",
-                "tags": ["töö", "ideed"],
+                "tags": [
+                  "töö",
+                  "ideed"
+                ],
                 "reminder": "2025-03-15T10:00:00Z"
               }
             }
@@ -275,8 +324,14 @@
     "/notes/{id}": {
       "patch": {
         "summary": "Uuenda märget",
-        "tags": ["Notes"],
-        "security": [{"bearerAuth": []}],
+        "tags": [
+          "Notes"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
@@ -310,8 +365,14 @@
       },
       "delete": {
         "summary": "Kustuta märge",
-        "tags": ["Notes"],
-        "security": [{"bearerAuth": []}],
+        "tags": [
+          "Notes"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
@@ -338,8 +399,14 @@
     "/tags": {
       "get": {
         "summary": "Kuva kõik sildid",
-        "tags": ["Tags"],
-        "security": [{"bearerAuth": []}],
+        "tags": [
+          "Tags"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "responses": {
           "200": {
             "description": "Sildid edukalt tagastatud",
@@ -361,8 +428,14 @@
       },
       "post": {
         "summary": "Loo uus silt",
-        "tags": ["Tags"],
-        "security": [{"bearerAuth": []}],
+        "tags": [
+          "Tags"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -392,8 +465,14 @@
     "/tags/{id}": {
       "patch": {
         "summary": "Uuenda silti",
-        "tags": ["Tags"],
-        "security": [{"bearerAuth": []}],
+        "tags": [
+          "Tags"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
@@ -427,8 +506,14 @@
       },
       "delete": {
         "summary": "Kustuta silt",
-        "tags": ["Tags"],
-        "security": [{"bearerAuth": []}],
+        "tags": [
+          "Tags"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
@@ -457,7 +542,10 @@
     "schemas": {
       "User": {
         "type": "object",
-        "required": ["username", "password"],
+        "required": [
+          "username",
+          "password"
+        ],
         "properties": {
           "id": {
             "type": "string",
@@ -488,7 +576,10 @@
       },
       "Note": {
         "type": "object",
-        "required": ["title", "content"],
+        "required": [
+          "title",
+          "content"
+        ],
         "properties": {
           "id": {
             "type": "string",
@@ -518,7 +609,9 @@
       },
       "Tag": {
         "type": "object",
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "properties": {
           "id": {
             "type": "string",
