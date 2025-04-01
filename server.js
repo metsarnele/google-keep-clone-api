@@ -244,7 +244,13 @@ app.post("/users", async (req, res) => {
         console.log(`New user registered: ${username}, Total users: ${users.length}`);
         console.log(`Users saved to ${USERS_FILE}`);
         
-        return res.status(201).location(`/api/users/${newUser.id}`).json({ message: "User registered successfully", user: newUser });
+        // Create a sanitized user object without the password hash
+        const userResponse = {
+            id: newUser.id,
+            username: newUser.username
+            // password hash is intentionally omitted
+        };
+        return res.status(201).location(`/api/users/${newUser.id}`).json({ message: "User registered successfully", user: userResponse });
     } catch (error) {
         console.error('Error in user registration:', error);
         return res.status(500).json({ message: "Internal server error during registration" });

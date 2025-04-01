@@ -21,6 +21,12 @@ Ensure you have the following installed on your system:
    npm install
    ```
 
+3. **Set up environment variables**
+   ```sh
+   cp .env.example .env
+   ```
+   Then edit the `.env` file to add your own values for the environment variables.
+
 ## Running the Application
 
 ### Start the Server
