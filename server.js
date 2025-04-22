@@ -86,22 +86,22 @@ const loadSwaggerDocs = () => {
     console.log('Loading OpenAPI documentation files...');
     const swaggerDocEn = JSON.parse(fs.readFileSync(openApiPath, "utf8"));
     const swaggerDocEt = JSON.parse(fs.readFileSync(openApiEtPath, "utf8"));
-    
+
     // Set server URLs to ensure they point to the correct endpoints
-    swaggerDocEn.servers = [{ 
-        url: isProd ? 'https://keep-api.nele.my' : '/', 
-        description: isProd ? 'Production API (English)' : 'Local Development API (English)' 
+    swaggerDocEn.servers = [{
+        url: isProd ? 'https://keep-api.nele.my' : '/',
+        description: isProd ? 'Production API (English)' : 'Local Development API (English)'
     }];
-    
-    swaggerDocEt.servers = [{ 
-        url: isProd ? 'https://keep-api.nele.my' : '/', 
-        description: isProd ? 'Production API (Estonian)' : 'Local Development API (Estonian)' 
+
+    swaggerDocEt.servers = [{
+        url: isProd ? 'https://keep-api.nele.my' : '/',
+        description: isProd ? 'Production API (Estonian)' : 'Local Development API (Estonian)'
     }];
-    
+
     // Set Swagger UI URLs based on environment and language
     swaggerDocEn.externalDocs = { url: DOCS_EN_URL, description: 'English Documentation' };
     swaggerDocEt.externalDocs = { url: DOCS_ET_URL, description: 'Eesti Dokumentatsioon' };
-    
+
     return { swaggerDocEn, swaggerDocEt };
 };
 
@@ -141,6 +141,7 @@ const DATA_DIR = path.join(__dirname, 'data');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const NOTES_FILE = path.join(DATA_DIR, 'notes.json');
 const TAGS_FILE = path.join(DATA_DIR, 'tags.json');
+const BLACKLIST_FILE = path.join(DATA_DIR, 'blacklist.json');
 
 // Create data directory if it doesn't exist
 if (!fs.existsSync(DATA_DIR)) {
@@ -151,6 +152,7 @@ if (!fs.existsSync(DATA_DIR)) {
 let users = [];
 let notes = [];
 let tags = [];
+let tokenBlacklist = []; // Store for revoked tokens
 
 try {
     if (fs.existsSync(USERS_FILE)) {
@@ -162,6 +164,9 @@ try {
     if (fs.existsSync(TAGS_FILE)) {
         tags = JSON.parse(fs.readFileSync(TAGS_FILE, 'utf8'));
     }
+    if (fs.existsSync(BLACKLIST_FILE)) {
+        tokenBlacklist = JSON.parse(fs.readFileSync(BLACKLIST_FILE, 'utf8'));
+    }
 } catch (error) {
     console.error('Error loading data files:', error);
 }
@@ -172,27 +177,51 @@ const saveData = () => {
         fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
         fs.writeFileSync(NOTES_FILE, JSON.stringify(notes, null, 2));
         fs.writeFileSync(TAGS_FILE, JSON.stringify(tags, null, 2));
+        fs.writeFileSync(BLACKLIST_FILE, JSON.stringify(tokenBlacklist, null, 2));
     } catch (error) {
         console.error('Error saving data files:', error);
     }
 };
 
-const authenticateToken = (req, res, next) => {
-    const token = req.header("Authorization");
-    if (!token) return res.status(401).json({ message: "Access denied" });
+// Function to clean expired tokens from blacklist
+const cleanBlacklist = () => {
+    const now = Math.floor(Date.now() / 1000); // Current time in seconds
+    const validTokens = tokenBlacklist.filter(item => item.exp > now);
 
-    jwt.verify(token.replace("Bearer ", ""), SECRET_KEY, (err, user) => {
+    if (validTokens.length !== tokenBlacklist.length) {
+        tokenBlacklist = validTokens;
+        saveData();
+        console.log(`Cleaned ${tokenBlacklist.length - validTokens.length} expired tokens from blacklist`);
+    }
+};
+
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.header("Authorization");
+    if (!authHeader) return res.status(401).json({ message: "Access denied" });
+
+    const token = authHeader.replace("Bearer ", "");
+
+    // Check if token is in blacklist
+    if (tokenBlacklist.some(item => item.token === token)) {
+        return res.status(401).json({ message: "Token has been revoked" });
+    }
+
+    jwt.verify(token, SECRET_KEY, (err, user) => {
         if (err) return res.status(403).json({ message: "Invalid token" });
         req.user = user;
+        req.token = token; // Store token for potential revocation
         next();
     });
 };
+
+// Run blacklist cleanup periodically (every hour)
+setInterval(cleanBlacklist, 60 * 60 * 1000);
 
 // User routes
 app.post("/users", async (req, res) => {
     try {
         const { username, password } = req.body;
-        
+
         // Always ensure we have the latest users data
         if (fs.existsSync(USERS_FILE)) {
             try {
@@ -213,10 +242,10 @@ app.post("/users", async (req, res) => {
             console.log('Users file does not exist, using empty array');
             users = [];
         }
-        
+
         console.log(`Attempting to register user: ${username}`);
         console.log(`Current users in system: ${JSON.stringify(users.map(u => u.username))}`);
-        
+
         if (!username || !password) {
             return res.status(400).json({ message: "Username and password are required" });
         }
@@ -224,7 +253,7 @@ app.post("/users", async (req, res) => {
         // Check if user already exists - use case-insensitive comparison
         const existingUser = users.find(u => u.username && u.username.toLowerCase() === username.toLowerCase());
         console.log(`Existing user check result: ${existingUser ? 'User exists' : 'User does not exist'}`);
-        
+
         if (existingUser) {
             console.log(`Rejecting registration for existing username: ${username}`);
             return res.status(409).json({ message: "User already exists" });
@@ -233,17 +262,17 @@ app.post("/users", async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
         const newUser = { id: uuidv4(), username, password: hashedPassword };
         users.push(newUser);
-        
+
         // Ensure data directory exists before saving
         if (!fs.existsSync(DATA_DIR)) {
             fs.mkdirSync(DATA_DIR, { recursive: true });
         }
-        
+
         // Save users to file
         fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
         console.log(`New user registered: ${username}, Total users: ${users.length}`);
         console.log(`Users saved to ${USERS_FILE}`);
-        
+
         // Create a sanitized user object without the password hash
         const userResponse = {
             id: newUser.id,
@@ -273,16 +302,23 @@ app.patch("/users/:id", authenticateToken, async (req, res) => {
 
     // Save users to file
     saveData();
-    
+
     res.status(200).json({ message: "User updated successfully" });
 });
 
 app.delete("/users/:id", authenticateToken, (req, res) => {
+    // Check if user exists before attempting to delete
+    const userExists = users.some(u => u.id === req.params.id);
+
+    if (!userExists) {
+        return res.status(404).json({ message: "User not found" });
+    }
+
     users = users.filter(u => u.id !== req.params.id);
-    
+
     // Save users to file
     saveData();
-    
+
     res.status(204).send();
 });
 
@@ -297,7 +333,32 @@ app.post("/sessions", async (req, res) => {
 });
 
 app.delete("/sessions", authenticateToken, (req, res) => {
-    res.status(204).send();
+    try {
+        // Get token from request
+        const token = req.token;
+
+        // Decode token to get expiration time
+        const decoded = jwt.decode(token);
+
+        if (decoded && decoded.exp) {
+            // Add token to blacklist
+            tokenBlacklist.push({
+                token: token,
+                exp: decoded.exp,
+                revokedAt: Math.floor(Date.now() / 1000)
+            });
+
+            // Save blacklist to file
+            saveData();
+
+            console.log(`Token for user ${decoded.username || decoded.id} has been revoked`);
+        }
+
+        res.status(204).send();
+    } catch (error) {
+        console.error('Error during logout:', error);
+        res.status(500).json({ message: "Internal server error during logout" });
+    }
 });
 
 // Notes routes
@@ -309,10 +370,10 @@ app.post("/notes", authenticateToken, (req, res) => {
 
     const newNote = { id: uuidv4(), title, content, tags: noteTags || [], reminder };
     notes.push(newNote);
-    
+
     // Save notes to file
     saveData();
-    
+
     res.status(201).location(`/notes/${newNote.id}`).json({ message: "Note created successfully", note: newNote });
 });
 
@@ -321,19 +382,26 @@ app.patch("/notes/:id", authenticateToken, (req, res) => {
     if (!note) return res.status(404).json({ message: "Note not found" });
 
     Object.assign(note, req.body);
-    
+
     // Save notes to file
     saveData();
-    
+
     res.status(200).json({ message: "Note updated successfully" });
 });
 
 app.delete("/notes/:id", authenticateToken, (req, res) => {
+    // Check if note exists before attempting to delete
+    const noteExists = notes.some(n => n.id === req.params.id);
+
+    if (!noteExists) {
+        return res.status(404).json({ message: "Note not found" });
+    }
+
     notes = notes.filter(n => n.id !== req.params.id);
-    
+
     // Save notes to file
     saveData();
-    
+
     res.status(204).send();
 });
 
@@ -350,10 +418,10 @@ app.post("/tags", authenticateToken, (req, res) => {
 
     const newTag = { id: uuidv4(), name };
     tags.push(newTag);
-    
+
     // Save tags to file
     saveData();
-    
+
     res.status(201).location(`/tags/${newTag.id}`).json({ message: "Tag created successfully", tag: newTag });
 });
 
@@ -367,19 +435,26 @@ app.patch("/tags/:id", authenticateToken, (req, res) => {
         if (existingTag) return res.status(409).json({ message: "Tag name already exists" });
         tag.name = req.body.name;
     }
-    
+
     // Save tags to file
     saveData();
-    
+
     res.status(200).json({ message: "Tag updated successfully" });
 });
 
 app.delete("/tags/:id", authenticateToken, (req, res) => {
+    // Check if tag exists before attempting to delete
+    const tagExists = tags.some(t => t.id === req.params.id);
+
+    if (!tagExists) {
+        return res.status(404).json({ message: "Tag not found" });
+    }
+
     tags = tags.filter(t => t.id !== req.params.id);
-    
+
     // Save tags to file
     saveData();
-    
+
     res.status(204).send();
 });
 
