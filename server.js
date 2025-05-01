@@ -197,17 +197,27 @@ const cleanBlacklist = () => {
 
 const authenticateToken = (req, res, next) => {
     const authHeader = req.header("Authorization");
-    if (!authHeader) return res.status(401).json({ message: "Access denied" });
+    if (!authHeader) {
+        // Set WWW-Authenticate header as required by RFC 6750
+        res.setHeader('WWW-Authenticate', 'Bearer realm="api"');
+        return res.status(401).json({ message: "Access denied" });
+    }
 
     const token = authHeader.replace("Bearer ", "");
 
     // Check if token is in blacklist
     if (tokenBlacklist.some(item => item.token === token)) {
+        // Set WWW-Authenticate header as required by RFC 6750
+        res.setHeader('WWW-Authenticate', 'Bearer error="invalid_token", error_description="The token has been revoked"');
         return res.status(401).json({ message: "Token has been revoked" });
     }
 
     jwt.verify(token, SECRET_KEY, (err, user) => {
-        if (err) return res.status(403).json({ message: "Invalid token" });
+        if (err) {
+            // Set WWW-Authenticate header as required by RFC 6750
+            res.setHeader('WWW-Authenticate', 'Bearer error="invalid_token", error_description="The access token is invalid"');
+            return res.status(401).json({ message: "Invalid token" });
+        }
         req.user = user;
         req.token = token; // Store token for potential revocation
         next();
@@ -326,7 +336,11 @@ app.delete("/users/:id", authenticateToken, (req, res) => {
 app.post("/sessions", async (req, res) => {
     const { username, password } = req.body;
     const user = users.find(u => u.username === username);
-    if (!user || !(await bcrypt.compare(password, user.password))) return res.status(401).json({ message: "Invalid credentials" });
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+        // Set WWW-Authenticate header as required by RFC 7235
+        res.setHeader('WWW-Authenticate', 'Basic realm="api"');
+        return res.status(401).json({ message: "Invalid credentials" });
+    }
 
     const token = jwt.sign({ id: user.id, username: user.username }, SECRET_KEY, { expiresIn: "1h" });
     res.status(200).json({ token });
