@@ -40,7 +40,8 @@ const API_URL = isProd ? 'https://keep-api.nele.my' : `http://localhost:${PORT}`
 app.use(cors({
   origin: '*',  // Allow all origins
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['WWW-Authenticate']  // Expose WWW-Authenticate header to clients
 }));
 app.use(bodyParser.json());
 
