@@ -155,6 +155,54 @@ let notes = [];
 let tags = [];
 let tokenBlacklist = []; // Store for revoked tokens
 
+// Function to migrate existing data to include user IDs
+const migrateData = (loadedUsers, loadedNotes, loadedTags) => {
+    // Check if any notes or tags are missing userId
+    const notesNeedMigration = loadedNotes.some(note => !note.userId);
+    const tagsNeedMigration = loadedTags.some(tag => !tag.userId);
+    
+    if (!notesNeedMigration && !tagsNeedMigration) {
+        return { users: loadedUsers, notes: loadedNotes, tags: loadedTags };
+    }
+    
+    console.log('Migrating data to include user IDs...');
+    
+    // If we need to migrate but have no users, create a default user
+    if (loadedUsers.length === 0) {
+        const defaultUserId = uuidv4();
+        const defaultUser = {
+            id: defaultUserId,
+            username: 'admin',
+            password: '$2b$10$eCc/b4iFV0cXmtbjvxKjXOBMKP.Ib7CYzD/Qg4yeA9EGrSWRhvwVi' // hashed 'admin'
+        };
+        loadedUsers.push(defaultUser);
+        console.log('Created default user with username: admin and password: admin');
+    }
+    
+    // Use the first user as the owner for all existing notes and tags
+    const defaultUserId = loadedUsers[0].id;
+    
+    // Migrate notes
+    const migratedNotes = loadedNotes.map(note => {
+        if (!note.userId) {
+            return { ...note, userId: defaultUserId, createdAt: note.createdAt || new Date().toISOString() };
+        }
+        return note;
+    });
+    
+    // Migrate tags
+    const migratedTags = loadedTags.map(tag => {
+        if (!tag.userId) {
+            return { ...tag, userId: defaultUserId, createdAt: tag.createdAt || new Date().toISOString() };
+        }
+        return tag;
+    });
+    
+    console.log(`Migration complete. Associated ${migratedNotes.length} notes and ${migratedTags.length} tags with user ID: ${defaultUserId}`);
+    
+    return { users: loadedUsers, notes: migratedNotes, tags: migratedTags };
+};
+
 try {
     if (fs.existsSync(USERS_FILE)) {
         users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
@@ -168,6 +216,16 @@ try {
     if (fs.existsSync(BLACKLIST_FILE)) {
         tokenBlacklist = JSON.parse(fs.readFileSync(BLACKLIST_FILE, 'utf8'));
     }
+    
+    // Migrate data if needed
+    const migratedData = migrateData(users, notes, tags);
+    users = migratedData.users;
+    notes = migratedData.notes;
+    tags = migratedData.tags;
+    
+    // Save migrated data
+    saveData();
+    
 } catch (error) {
     console.error('Error loading data files:', error);
 }
@@ -231,7 +289,11 @@ setInterval(cleanBlacklist, 60 * 60 * 1000);
 // User routes
 app.post("/users", async (req, res) => {
     try {
-        const { username, password } = req.body;
+        let { username, password } = req.body;
+        
+        // Trim whitespace from input fields
+        username = username ? username.trim() : '';
+        password = password ? password.trim() : '';
 
         // Always ensure we have the latest users data
         if (fs.existsSync(USERS_FILE)) {
@@ -259,6 +321,11 @@ app.post("/users", async (req, res) => {
 
         if (!username || !password) {
             return res.status(400).json({ message: "Username and password are required" });
+        }
+        
+        // Check if username or password are just whitespace (which would be empty strings after trimming)
+        if (username === '' || password === '') {
+            return res.status(400).json({ message: "Username and password cannot be empty or just whitespace" });
         }
 
         // Check if user already exists - use case-insensitive comparison
@@ -303,12 +370,24 @@ app.patch("/users/:id", authenticateToken, async (req, res) => {
     const user = users.find(u => u.id === req.params.id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (req.body.password) user.password = await bcrypt.hash(req.body.password, 10);
+    // Trim whitespace from input fields
+    if (req.body.password) {
+        const trimmedPassword = req.body.password.trim();
+        if (trimmedPassword === '') {
+            return res.status(400).json({ message: "Password cannot be empty or just whitespace" });
+        }
+        user.password = await bcrypt.hash(trimmedPassword, 10);
+    }
+    
     if (req.body.username) {
+        const trimmedUsername = req.body.username.trim();
+        if (trimmedUsername === '') {
+            return res.status(400).json({ message: "Username cannot be empty or just whitespace" });
+        }
         // Check if the new username already exists
-        const existingUser = users.find(u => u.username === req.body.username && u.id !== req.params.id);
+        const existingUser = users.find(u => u.username === trimmedUsername && u.id !== req.params.id);
         if (existingUser) return res.status(409).json({ message: "Username already exists" });
-        user.username = req.body.username;
+        user.username = trimmedUsername;
     }
 
     // Save users to file
@@ -335,7 +414,19 @@ app.delete("/users/:id", authenticateToken, (req, res) => {
 
 // Session routes
 app.post("/sessions", async (req, res) => {
-    const { username, password } = req.body;
+    let { username, password } = req.body;
+    
+    // Trim whitespace from input fields
+    username = username ? username.trim() : '';
+    password = password ? password.trim() : '';
+    
+    // Check if username or password are empty after trimming
+    if (!username || !password) {
+        // Set WWW-Authenticate header as required by RFC 7235
+        res.setHeader('WWW-Authenticate', 'Basic realm="api"');
+        return res.status(400).json({ message: "Username and password are required" });
+    }
+    
     const user = users.find(u => u.username === username);
     if (!user || !(await bcrypt.compare(password, user.password))) {
         // Set WWW-Authenticate header as required by RFC 7235
@@ -377,13 +468,37 @@ app.delete("/sessions", authenticateToken, (req, res) => {
 });
 
 // Notes routes
-app.get("/notes", authenticateToken, (req, res) => res.status(200).json(notes));
+app.get("/notes", authenticateToken, (req, res) => {
+    // Filter notes by user ID
+    const userNotes = notes.filter(note => note.userId === req.user.id);
+    res.status(200).json(userNotes);
+});
 
 app.post("/notes", authenticateToken, (req, res) => {
-    const { title, content, tags: noteTags, reminder } = req.body;
+    let { title, content, tags: noteTags, reminder } = req.body;
+    
+    // Trim whitespace from input fields
+    title = title ? title.trim() : '';
+    content = content ? content.trim() : '';
+    
     if (!title || !content) return res.status(400).json({ message: "Title and content are required" });
 
-    const newNote = { id: uuidv4(), title, content, tags: noteTags || [], reminder };
+    // Process tags if they exist
+    if (noteTags && Array.isArray(noteTags)) {
+        noteTags = noteTags.map(tag => typeof tag === 'string' ? tag.trim() : tag)
+            .filter(tag => tag && tag !== '');
+    }
+
+    // Associate note with the authenticated user
+    const newNote = { 
+        id: uuidv4(), 
+        userId: req.user.id, 
+        title, 
+        content, 
+        tags: noteTags || [], 
+        reminder,
+        createdAt: new Date().toISOString()
+    };
     notes.push(newNote);
 
     // Save notes to file
@@ -393,10 +508,33 @@ app.post("/notes", authenticateToken, (req, res) => {
 });
 
 app.patch("/notes/:id", authenticateToken, (req, res) => {
-    const note = notes.find(n => n.id === req.params.id);
+    const note = notes.find(n => n.id === req.params.id && n.userId === req.user.id);
     if (!note) return res.status(404).json({ message: "Note not found" });
 
-    Object.assign(note, req.body);
+    // Trim whitespace from input fields
+    const updatedData = { ...req.body };
+    
+    if (updatedData.title !== undefined) {
+        updatedData.title = updatedData.title ? updatedData.title.trim() : '';
+        if (updatedData.title === '') {
+            return res.status(400).json({ message: "Title cannot be empty" });
+        }
+    }
+    
+    if (updatedData.content !== undefined) {
+        updatedData.content = updatedData.content ? updatedData.content.trim() : '';
+        if (updatedData.content === '') {
+            return res.status(400).json({ message: "Content cannot be empty" });
+        }
+    }
+    
+    // Process tags if they exist
+    if (updatedData.tags && Array.isArray(updatedData.tags)) {
+        updatedData.tags = updatedData.tags.map(tag => typeof tag === 'string' ? tag.trim() : tag)
+            .filter(tag => tag && tag !== '');
+    }
+
+    Object.assign(note, updatedData);
 
     // Save notes to file
     saveData();
@@ -405,14 +543,14 @@ app.patch("/notes/:id", authenticateToken, (req, res) => {
 });
 
 app.delete("/notes/:id", authenticateToken, (req, res) => {
-    // Check if note exists before attempting to delete
-    const noteExists = notes.some(n => n.id === req.params.id);
+    // Check if note exists and belongs to the authenticated user
+    const noteExists = notes.some(n => n.id === req.params.id && n.userId === req.user.id);
 
     if (!noteExists) {
         return res.status(404).json({ message: "Note not found" });
     }
 
-    notes = notes.filter(n => n.id !== req.params.id);
+    notes = notes.filter(n => n.id !== req.params.id || n.userId !== req.user.id);
 
     // Save notes to file
     saveData();
@@ -421,17 +559,36 @@ app.delete("/notes/:id", authenticateToken, (req, res) => {
 });
 
 // Tags routes
-app.get("/tags", authenticateToken, (req, res) => res.status(200).json(tags));
+app.get("/tags", authenticateToken, (req, res) => {
+    // Filter tags by user ID
+    const userTags = tags.filter(tag => tag.userId === req.user.id);
+    res.status(200).json(userTags);
+});
 
 app.post("/tags", authenticateToken, (req, res) => {
-    const { name } = req.body;
+    let { name } = req.body;
+    
+    // Trim whitespace from input fields
+    name = name ? name.trim() : '';
+    
     if (!name) return res.status(400).json({ message: "Tag name is required" });
+    
+    // Check if tag name is just whitespace (which would be empty string after trimming)
+    if (name === '') {
+        return res.status(400).json({ message: "Tag name cannot be empty or just whitespace" });
+    }
 
-    // Check if tag already exists
-    const existingTag = tags.find(t => t.name === name);
+    // Check if tag already exists for this user
+    const existingTag = tags.find(t => t.name === name && t.userId === req.user.id);
     if (existingTag) return res.status(409).json({ message: "Tag already exists" });
 
-    const newTag = { id: uuidv4(), name };
+    // Associate tag with the authenticated user
+    const newTag = { 
+        id: uuidv4(), 
+        userId: req.user.id, 
+        name,
+        createdAt: new Date().toISOString()
+    };
     tags.push(newTag);
 
     // Save tags to file
@@ -441,14 +598,18 @@ app.post("/tags", authenticateToken, (req, res) => {
 });
 
 app.patch("/tags/:id", authenticateToken, (req, res) => {
-    const tag = tags.find(t => t.id === req.params.id);
+    const tag = tags.find(t => t.id === req.params.id && t.userId === req.user.id);
     if (!tag) return res.status(404).json({ message: "Tag not found" });
 
-    if (req.body.name) {
+    if (req.body.name !== undefined) {
+        const trimmedName = req.body.name ? req.body.name.trim() : '';
+        if (trimmedName === '') {
+            return res.status(400).json({ message: "Tag name cannot be empty or just whitespace" });
+        }
         // Check if the new tag name already exists
-        const existingTag = tags.find(t => t.name === req.body.name && t.id !== req.params.id);
+        const existingTag = tags.find(t => t.name === trimmedName && t.id !== req.params.id);
         if (existingTag) return res.status(409).json({ message: "Tag name already exists" });
-        tag.name = req.body.name;
+        tag.name = trimmedName;
     }
 
     // Save tags to file
@@ -458,14 +619,14 @@ app.patch("/tags/:id", authenticateToken, (req, res) => {
 });
 
 app.delete("/tags/:id", authenticateToken, (req, res) => {
-    // Check if tag exists before attempting to delete
-    const tagExists = tags.some(t => t.id === req.params.id);
+    // Check if tag exists and belongs to the authenticated user
+    const tagExists = tags.some(t => t.id === req.params.id && t.userId === req.user.id);
 
     if (!tagExists) {
         return res.status(404).json({ message: "Tag not found" });
     }
 
-    tags = tags.filter(t => t.id !== req.params.id);
+    tags = tags.filter(t => t.id !== req.params.id || t.userId !== req.user.id);
 
     // Save tags to file
     saveData();

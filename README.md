@@ -10,18 +10,12 @@ Ensure you have the following installed on your system:
 
 ## Installation
 
-1. **Clone the repository**
-   ```sh
-   git clone https://github.com/your-repo/google-keep-api.git
-   cd google-keep-api
-   ```
-
-2. **Install dependencies**
+1. **Install dependencies**
    ```sh
    npm install
    ```
 
-3. **Set up environment variables**
+2. **Set up environment variables**
    ```sh
    cp .env.example .env
    ```
