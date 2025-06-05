@@ -477,11 +477,22 @@ app.get("/notes", authenticateToken, (req, res) => {
 app.post("/notes", authenticateToken, (req, res) => {
     let { title, content, tags: noteTags, reminder } = req.body;
     
-    // Trim whitespace from input fields
-    title = title ? title.trim() : '';
-    content = content ? content.trim() : '';
+    // Validate data types
+    if (title === undefined || content === undefined) {
+        return res.status(400).json({ message: "Title and content are required" });
+    }
     
-    if (!title || !content) return res.status(400).json({ message: "Title and content are required" });
+    if (typeof title !== 'string' || typeof content !== 'string') {
+        return res.status(400).json({
+            message: "Title and content must be strings"
+        });
+    }
+    
+    // Trim whitespace from input fields
+    title = title.trim();
+    content = content.trim();
+    
+    if (!title || !content) return res.status(400).json({ message: "Title and content cannot be empty" });
 
     // Process tags if they exist
     if (noteTags && Array.isArray(noteTags)) {
@@ -514,18 +525,14 @@ app.patch("/notes/:id", authenticateToken, (req, res) => {
     // Trim whitespace from input fields
     const updatedData = { ...req.body };
     
-    if (updatedData.title !== undefined) {
-        updatedData.title = updatedData.title ? updatedData.title.trim() : '';
-        if (updatedData.title === '') {
-            return res.status(400).json({ message: "Title cannot be empty" });
-        }
+    if (updatedData.title !== undefined && updatedData.title !== null) {
+        const trimmed = updatedData.title.toString().trim();
+        if (trimmed) note.title = trimmed;
     }
     
-    if (updatedData.content !== undefined) {
-        updatedData.content = updatedData.content ? updatedData.content.trim() : '';
-        if (updatedData.content === '') {
-            return res.status(400).json({ message: "Content cannot be empty" });
-        }
+    if (updatedData.content !== undefined && updatedData.content !== null) {
+        const trimmed = updatedData.content.toString().trim();
+        if (trimmed) note.content = trimmed;
     }
     
     // Process tags if they exist
@@ -534,7 +541,10 @@ app.patch("/notes/:id", authenticateToken, (req, res) => {
             .filter(tag => tag && tag !== '');
     }
 
-    Object.assign(note, updatedData);
+    // Process tags if they exist (already handled above)
+    if (updatedData.tags && Array.isArray(updatedData.tags)) {
+        note.tags = updatedData.tags;
+    }
 
     // Save notes to file
     saveData();
@@ -568,12 +578,21 @@ app.get("/tags", authenticateToken, (req, res) => {
 app.post("/tags", authenticateToken, (req, res) => {
     let { name } = req.body;
     
+    // Validate data types
+    if (name === undefined) {
+        return res.status(400).json({ message: "Tag name is required" });
+    }
+    
+    if (typeof name !== 'string') {
+        return res.status(400).json({
+            message: "Tag name must be a string"
+        });
+    }
+    
     // Trim whitespace from input fields
-    name = name ? name.trim() : '';
+    name = name.trim();
     
-    if (!name) return res.status(400).json({ message: "Tag name is required" });
-    
-    // Check if tag name is just whitespace (which would be empty string after trimming)
+    // Check if tag name is empty after trimming
     if (name === '') {
         return res.status(400).json({ message: "Tag name cannot be empty or just whitespace" });
     }
@@ -601,15 +620,14 @@ app.patch("/tags/:id", authenticateToken, (req, res) => {
     const tag = tags.find(t => t.id === req.params.id && t.userId === req.user.id);
     if (!tag) return res.status(404).json({ message: "Tag not found" });
 
-    if (req.body.name !== undefined) {
-        const trimmedName = req.body.name ? req.body.name.trim() : '';
-        if (trimmedName === '') {
-            return res.status(400).json({ message: "Tag name cannot be empty or just whitespace" });
+    if (req.body.name !== undefined && req.body.name !== null) {
+        const trimmed = req.body.name.toString().trim();
+        if (trimmed) {
+            // Check if the new tag name already exists
+            const existingTag = tags.find(t => t.name === trimmed && t.id !== req.params.id);
+            if (existingTag) return res.status(409).json({ message: "Tag name already exists" });
+            tag.name = trimmed;
         }
-        // Check if the new tag name already exists
-        const existingTag = tags.find(t => t.name === trimmedName && t.id !== req.params.id);
-        if (existingTag) return res.status(409).json({ message: "Tag name already exists" });
-        tag.name = trimmedName;
     }
 
     // Save tags to file
